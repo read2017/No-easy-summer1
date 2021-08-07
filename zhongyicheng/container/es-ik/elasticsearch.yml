@@ -1,0 +1,25 @@
+# ======================== Elasticsearch Configuration =========================
+
+# ---------------------------------- Cluster -----------------------------------
+cluster.name: "docker-cluster"
+#
+# ------------------------------------ Node ------------------------------------
+logger.org.elasticsearch.discovery: TRACE
+# ----------------------------------- Paths ------------------------------------
+
+# ----------------------------------- Memory -----------------------------------
+#ES_JAVA_OPTS: "-Xms750m -Xmx750m"
+bootstrap.memory_lock: false
+# ---------------------------------- Network -----------------------------------
+network.host: 0.0.0.0
+http.port: 9200
+
+http.cors.enabled: true
+http.cors.allow-origin: "*"
+
+# --------------------------------- Discovery ----------------------------------
+discovery.type: single-node
+discovery.zen.minimum_master_nodes: 1
+
+# ---------------------------------- Gateway -----------------------------------
+xpack.license.self_generated.type: basic

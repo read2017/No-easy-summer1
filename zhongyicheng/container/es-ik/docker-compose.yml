@@ -1,0 +1,16 @@
+version: '2.2'
+services:
+  elasticsearch:
+    image: elasticsearch-ik:7.14.0
+    container_name: elasticsearch-ik
+    environment:
+      - discovery.type=single-node
+    volumes:
+      - /data01/elasticsearchData:/usr/share/elasticsearch/data
+      #- ./elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
+    hostname: elasticsearch
+    restart: on-failure
+    hostname: elasticsearch
+    ports:
+      - 8200:9200
+      - 8300:9300
