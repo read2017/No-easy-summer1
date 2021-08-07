@@ -1,7 +1,8 @@
 # 文件说明
 
 - `fuzzyQuery`为调用elasticsearch的python模块，详情见`README.md`
-- `scripts`文件夹下为数据导入相关脚本，其中`multiprocess_import.py`为导入脚本，`process_thread_cmp.py`为多进程、多线程对比benchmark脚本，`test.py`为查询测试脚本。
+- `scripts`文件夹下为数据导入相关脚本，其中`multiprocess_import.py`为导入脚本，`process_thread_cmp.py`为多进程、多线程对比benchmark脚本，`test.py`为查询测试脚本。\
+- `container`文件夹下为容器相关脚本，其中`es-ik`下为elasticsearch-ik容器构建及运行脚本，`docker-compose.yml`为elasticsearch+logstash服务编排文件。
 
 # 数据导入
 
@@ -22,3 +23,12 @@ elasticsearch默认开启线程池，自动根据CPU核数调优，无需干预�
 - 支持自动同步数据库
 - 改用elastic工具栈中的logstash
 - ~~优化索引准确率~~
+
+# 容器运行
+
+*假设目前处在container文件夹*
+
+- 首先需要`docker build es-ik/.`构建elasticsearch-ik容器
+- elasticsearch-ik单容器直接使用`es-ik/docker-compose.yml`即可，或手动运行`docker run --rm -it -p port1:9200 -p port2:9300 -v [$PWD/es-ik/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml] elasticsearch-ik`
+- es+logstash组合运行`docker-compose up`调用container下的docker-compose.yml即可
+- logstash还未配置好
