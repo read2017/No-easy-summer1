@@ -29,6 +29,6 @@ elasticsearch默认开启线程池，自动根据CPU核数调优，无需干预�
 *假设目前处在container文件夹*
 
 - 首先需要`docker build es-ik/.`构建elasticsearch-ik容器
-- elasticsearch-ik单容器直接使用`es-ik/docker-compose.yml`即可，或手动运行`docker run --rm -it -p port1:9200 -p port2:9300 -v [$PWD/es-ik/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml] elasticsearch-ik`
+- elasticsearch-ik单容器直接使用`es-ik/docker-compose.yml`即可，或手动运行`docker run --rm -it -p port1:9200 -p port2:9300 -v [$PWD/es-ik/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml] -v data-export-dir-absolute:/usr/share/elasticsearch/data elasticsearch-ik`
 - es+logstash组合运行`docker-compose up`调用container下的docker-compose.yml即可
 - logstash还未配置好
