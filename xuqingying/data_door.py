@@ -18,34 +18,6 @@ class DataDoor:
         self.entity1 = entity1
         self.entity2=entity2
 
-    def get_dataAB(self):
-        """
-        返回res：从gstore查询到的json数据
-        """
-        entity1=self.entity1
-        entity2=self.entity2
-        sparql = """
-                            select * where {
-                             ?entity <file:///D:/d2rq-0.8.1/vocab/entity_name>"%s".
-                             ?entity <file:///D:/d2rq-0.8.1/vocab/entity_id> ?entity_id.
-                             ?hold <file:///D:/d2rq-0.8.1/vocab/hold_head_id> ?entity_id.
-                             ?hold <file:///D:/d2rq-0.8.1/vocab/hold_amount> ?hold_amount.
-                             ?hold <file:///D:/d2rq-0.8.1/vocab/hold_stake> ?hold_stake.
-                             ?hold <file:///D:/d2rq-0.8.1/vocab/hold_tail_id> ?associate_entity_id.
-                             ?associate_entity <file:///D:/d2rq-0.8.1/vocab/entity_id> ?associate_entity_id.
-                             ?associate_entity <file:///D:/d2rq-0.8.1/vocab/entity_name> "%s".
-                            }
-                            """ % (entity1, entity2)
-        IP = self.IP
-        Port = self.Port
-        username = self.username
-        password = self.password
-        gc = GstoreConnector.GstoreConnector(IP, Port, username, password)
-        res = gc.query("entity2", "json", sparql, "GET")
-        print(res)
-        print(type(res))
-        return res
-
     def get_data(self):
         """
         返回res：从gstore查询到的json数据
@@ -53,17 +25,16 @@ class DataDoor:
         entity1=self.entity1
         entity2=self.entity2
         sparql = """
-                            select * where {
-                             ?entity <file:///D:/d2rq-0.8.1/vocab/entity_name>"%s".
-                             ?entity <file:///D:/d2rq-0.8.1/vocab/entity_id> ?entity_id.
-                             ?hold <file:///D:/d2rq-0.8.1/vocab/hold_head_id> ?entity_id.
-                             ?hold <file:///D:/d2rq-0.8.1/vocab/hold_amount> ?hold_amount.
-                             ?hold <file:///D:/d2rq-0.8.1/vocab/hold_stake> ?hold_stake.
-                             ?hold <file:///D:/d2rq-0.8.1/vocab/hold_tail_id> ?associate_entity_id.
-                             ?associate_entity <file:///D:/d2rq-0.8.1/vocab/entity_id> ?associate_entity_id.
-                             ?associate_entity <file:///D:/d2rq-0.8.1/vocab/entity_name>?associate_entity_name.
-                            }
-                            """ % (entity1)
+        select * where {{
+                        ?entity <file:///D:/d2rq-0.8.1/vocab/entity_name> "{id1}".
+                        ?entity <file:///D:/d2rq-0.8.1/vocab/entity_id> ?entity_id.
+                        ?hold <file:///D:/d2rq-0.8.1/vocab/hold_head_id> ?entity_id.
+                        ?hold <file:///D:/d2rq-0.8.1/vocab/hold_amount> ?hold_amount.
+                        ?hold <file:///D:/d2rq-0.8.1/vocab/hold_stake> ?hold_stake.
+                        ?hold <file:///D:/d2rq-0.8.1/vocab/hold_tail_id> ?associate_entity_id.
+                        ?associate_entity <file:///D:/d2rq-0.8.1/vocab/entity_id> ?associate_entity_id.
+                        ?associate_entity <file:///D:/d2rq-0.8.1/vocab/entity_name> "{id2}".
+                        }}""".format(id1=entity1, id2=entity2)
         IP = self.IP
         Port = self.Port
         username = self.username
@@ -138,7 +109,6 @@ class DataDoor:
         result=self.get_data()
         res = json.loads(result)
         #print(res)
-        power=0
         # data = res['head']['vars']['hold_amout']
         #datas = res['results']['bindings']
         #for data in datas:
@@ -147,11 +117,10 @@ class DataDoor:
         #        power = data['hold_stake']['value']
         try:
             #data = res['head']['vars']['hold_amout']
-            datas=res['results']['bindings']
-            for data in datas:
-                if data['associate_entity_name']['value']==self.entity2:
-                    power=float(data['hold_stake']['value'])
-            return power
+            data=res['results']['bindings']
+            if data:
+                power=float(data['hold_stake']['value'])
+                return power
         except:
             pass
         #return power
@@ -202,8 +171,8 @@ if __name__=='__main__':
     b=DataDoor(IP, Port, username, password,entity2='上海山阳电讯器材厂')
     c=DataDoor(IP, Port, username, password,entity1='常玉英')
     #c.get_dataB()
-    print(c.data_processB())
+    #print(c.data_processB())
     #b.get_dataA()
-    print(b.data_processA())
-    #print(a.get_data())
-    print(a.data_process())
+    #print(b.data_processA())
+    print(a.get_dataA())
+    #print(a.data_process())

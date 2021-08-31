@@ -3,23 +3,22 @@ sys.path.append('../src')
 from data_door import DataDoor
 import find_path
 import numpy as np
-import banzhaf_1 as bz
 from wink_path import WeakPath as wp
 IP = "202.114.74.170"
 Port = 9900
-username = "root"
-password = "123456"
 class ControlAB:
     """
     查控制关联
     entity1:持股实体
     entity2:被控股公司
     """
-    def __init__(self,entity1,entity2,exist=False,control=False):
+    def __init__(self,entity1,entity2,username,password,exist=False,control=False):
         self.entity1=entity1
         self.entity2=entity2
         self.exist=exist#有无控制关联
         self.cotntrol=control#是否A受B控制
+        self.username=username
+        self.password=password
 
     def check(self):
         """
@@ -43,9 +42,10 @@ class ControlAB:
             self.exist=True
             graph=[]
             for path in paths:
-                ControlA = DataDoor(IP, Port, username, password, path[0],path[1])
+                ControlA = DataDoor(IP, Port, self.username, self.password, path[0],path[1])
                 power=ControlA.data_process()
-                graph.append([path[0],path[1],power])
+                if power:
+                    graph.append([path[0],path[1],power])
             WeakCacul=wp(graph)
             conAB=WeakCacul.calculation(self.entity1,self.entity2)
             allNodes=WeakCacul.Graph[0]
@@ -63,8 +63,10 @@ class ControlA:
     """
     输出：二维数组
     """
-    def __init__(self,entity):
+    def __init__(self,entity,username,password):
         self.entity=entity
+        self.username=username
+        self.password=password
 
     def getFather(self,layer):
         """
@@ -84,7 +86,7 @@ class ControlA:
                 for node in nodes:
                     print(node)
                     print(len(nodes))
-                    ControlA = DataDoor(IP, Port, username, password, entity2=node)
+                    ControlA = DataDoor(IP, Port, self.username, self.password, entity2=node)
                     data = ControlA.data_processA()
                     print(data)
                     if data:
@@ -97,10 +99,12 @@ class ControlA:
                 print(layer)
             for node1 in nodes:
                 for node2 in nodes:
-                    con12= DataDoor(IP, Port, username, password,node1, node2)
+                    con12= DataDoor(IP, Port, self.username, self.password,node1, node2)
                     power=con12.data_process()
-                    print(power)
-                    graph.append([node1,node2,power])
+                    if power:
+                        #print(power)
+                        graph.append([node1,node2,power])
+            print(graph)
             return graph
 
     def data_process(self,layer):
@@ -117,8 +121,10 @@ class ControlFull:
     """
     查控制网络页面
     """
-    def __init__(self,entity):
+    def __init__(self,entity,username,password):
         self.entity=entity
+        self.username=username
+        self.password=password
 
     def getSon(self,layer):
         """
@@ -135,7 +141,7 @@ class ControlFull:
             #graph=[]#所有边
             while layer>0:
                 for node in nodes:
-                    ControlA = DataDoor(IP, Port, username, password, entity1=node)
+                    ControlA = DataDoor(IP, Port, self.username, self.password, entity1=node)
                     data = ControlA.data_processA()
                     if data:
                         for da in data:
@@ -160,7 +166,7 @@ class ControlFull:
             graph=[]#所有边
             while layer>0:
                 for node in nodes:
-                    ControlA = DataDoor(IP, Port, username, password, entity2=node)
+                    ControlA = DataDoor(IP, Port, self.username, self.password, entity2=node)
                     data = ControlA.data_processA()
                     if data:
                         for da in data:
@@ -171,10 +177,11 @@ class ControlFull:
                 #print(layer)
             for node1 in nodes:
                 for node2 in nodes:
-                    con12= DataDoor(IP, Port, username, password,node1, node2)
+                    con12= DataDoor(IP, Port, self.username, self.password,node1, node2)
                     power=con12.data_process()
-                    graph.append([node1,node2,power])
-                    #print(power)
+                    if power:
+                        graph.append([node1,node2,power])
+                        #print(power)
             print('父节点提取完毕。')
             return graph
 
@@ -214,6 +221,8 @@ class ControlFull:
         return Department
 
 if __name__=='__main__':
+    uesrname = 'root'
+    password = '123456'
     #controlAB=ControlAB('常玉英','交通银行股份有限公司')
     #AB=controlAB.data_process()
     #print(AB)
@@ -221,12 +230,11 @@ if __name__=='__main__':
     #print(exist)
     #control=controlAB.cotntrol
     #print(control)
-
-    controlA=ControlA('上海山阳电讯器材厂')
+    controlA=ControlA('上海山阳电讯器材厂',uesrname,password)
     data=controlA.data_process(1)#向外提取一层
     print(data)
 
-    #controlB=ControlFull('常玉英')
+    #controlB=ControlFull('常玉英',uesrname,password)
     #B=controlB.data_process(1)#向内提取一层
     #print(B)
 
