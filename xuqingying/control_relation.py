@@ -2,7 +2,7 @@ import sys
 sys.path.append('../src')
 from data_door import DataDoor
 import find_path
-import numpy as np
+from data_door import pentration as pe
 from wink_path import WeakPath as wp
 IP = "202.114.74.170"
 Port = 9900
@@ -11,6 +11,11 @@ class ControlAB:
     查控制关联
     entity1:持股实体
     entity2:被控股公司
+    示例：
+    controlAB=ControlAB('常玉英','交通银行股份有限公司',uesrname,password)/输入：被查询的俩实体及用户名密码。
+    AB=controlAB.data_process()/若二者有控制关系，输出二者的控制权大小（float）,一定要运行该函数
+    exist=controlAB.exist/路径是否存在(bool)
+    control=controlAB.cotntrol/俩实体间是否有控制关系(bool)
     """
     def __init__(self,entity1,entity2,username,password,exist=False,control=False):
         self.entity1=entity1
@@ -47,11 +52,11 @@ class ControlAB:
                 if power:
                     graph.append([path[0],path[1],power])
             WeakCacul=wp(graph)
-            conAB=WeakCacul.calculation(self.entity1,self.entity2)
+            conAB=WeakCacul.calculation(self.entity1,self.entity2)[0]
             allNodes=WeakCacul.Graph[0]
             control=[]
             for node in allNodes:
-                con=WeakCacul.calculation(node,self.entity2)
+                con=WeakCacul.calculation(node,self.entity2)[0]
                 control.append(con)
             if max(control)==conAB:
                 self.cotntrol=True
@@ -62,6 +67,9 @@ class ControlAB:
 class ControlA:
     """
     输出：二维数组
+    示例：
+    controlA=ControlA('上海山阳电讯器材厂',uesrname,password)/输入：实体及用户名密码
+    data=controlA.data_process(1)#向外提取一层/输出：子图上两两节点的控制权[['','',(float)],[],[],]
     """
     def __init__(self,entity,username,password):
         self.entity=entity
@@ -111,15 +119,24 @@ class ControlA:
         """
         通过最弱边算法得到控制权
         """
-        graph=self.getFather(layer)
+        #graph=self.getFather(layer)
+        K=DataDoor(IP, Port, self.username, self.password, self.entity)
+        id=K.get_id()
+        print('获取到id')
+        PE=pe(self.username,self.password)
+        all_graph=PE.getPenetrationNetwork(id,level=layer)
+        graph=all_graph['links']
         print('数据加载完毕,开始计算。')
         WeakCacul=wp(graph)
-        control=WeakCacul.calcuAll()
+        [control,path]=WeakCacul.calcuAll()
         return control
 
 class ControlFull:
     """
     查控制网络页面
+    示例：
+    controlB=ControlFull('常玉英',uesrname,password)/输入：实体用户名密码
+    B=controlB.data_process(1,5)#向内提取一层,对于每一个子节点向外提取5层子图/输出：属于控制系的节点及控制权大小([['常玉英'(id),XXX,(float)],[],[]])
     """
     def __init__(self,entity,username,password):
         self.entity=entity
@@ -142,7 +159,7 @@ class ControlFull:
             while layer>0:
                 for node in nodes:
                     ControlA = DataDoor(IP, Port, self.username, self.password, entity1=node)
-                    data = ControlA.data_processA()
+                    data = ControlA.get_Son_id()
                     if data:
                         for da in data:
                             l.append(da[0])
@@ -186,22 +203,24 @@ class ControlFull:
             return graph
 
 
-    def data_process(self,layer):
+    def data_process(self,layer_son,layer_father):
         """
         输出：属于被查询实体控制系的点，及他们之间的控制权指数
         """
-        Sonnodes=self.getSon(layer)
+        Sonnodes=self.getSon(layer_son)
         Department=[]
+        entity_id=DataDoor(IP, Port, self.username, self.password, self.entity).get_id()
         for node in Sonnodes:
-            graph=self.getFather(layer)
+            PE=pe(self.username,self.password)
+            graph=PE.getPenetrationNetwork(node,level=layer_father)
             WeakCacul=wp(graph)
             control=[]
             for no in WeakCacul.Graph[0]:
-                con=WeakCacul.calculation(self.entity,no)
+                con=WeakCacul.calculation(self.entity,no)[0]
                 control.append(con)
-            conAB=WeakCacul.calculation(self.entity,node)
+            conAB=WeakCacul.calculation(self.entity,node)[0]
             if conAB==max(control):
-                Department.append([self.entity,node,conAB])
+                Department.append([entity_id,node,conAB])
             #班扎夫指数计算
             #id1.append(self.entity)
             #leng = len(id1)
@@ -223,18 +242,19 @@ class ControlFull:
 if __name__=='__main__':
     uesrname = 'root'
     password = '123456'
-    #controlAB=ControlAB('常玉英','交通银行股份有限公司')
+    #controlAB=ControlAB('常玉英','交通银行股份有限公司',uesrname,password)
     #AB=controlAB.data_process()
     #print(AB)
     #exist=controlAB.exist
     #print(exist)
     #control=controlAB.cotntrol
     #print(control)
-    controlA=ControlA('上海山阳电讯器材厂',uesrname,password)
-    data=controlA.data_process(1)#向外提取一层
-    print(data)
+    #=ControlA('上海山阳电讯器材厂',uesrname,password)
+    #print('h')
+    #data=controlA.data_process(5)#向外提取5层子图
+    #print(data)
 
-    #controlB=ControlFull('常玉英',uesrname,password)
-    #B=controlB.data_process(1)#向内提取一层
-    #print(B)
+    controlB=ControlFull('常玉英',uesrname,password)
+    B=controlB.data_process(1,5)#向内提取一层
+    print(B)
 

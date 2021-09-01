@@ -2,8 +2,14 @@ import numpy as np
 import pandas as pd
 class WeakPath:
     """
+    控制权计算文件
     输入：Graph【(a,b,hold)】a持股b hold
     输出：Control【a,b,control】a控制b control
+    示例：
+    a = [['a', 'b', 2], ['c', 'd', 3],['b','e',2],['a','a',4],['a','e',6]]/输入：[[]],股权网络图；
+    b = WeakPath(a)
+    [k,path] = b.calculation('a', 'b')/输出为：k:'a'对'b'的控制权(float)，path：’a'控制'b'的所有路径（[[‘a','b']]）
+    [w,alpath]=b.calcuAll()/输出为：w:所有节点对之间的控制权（[['a','b',2],[],[]]）；alpath：所有节点对间的控制路径([[['a','b']],[[]],])
     """
     def __init__(self,graph):
         self.graph=graph
@@ -63,7 +69,7 @@ class WeakPath:
         if b not in edgeLinks:
             edgeLinks[b] = set()
         edgeLinks[a].add(b)
-        edgeLinks[b].add(a)
+        #edgeLinks[b].add(a)#无向图十字链表
 
     def Check(self, entity1, entity2, path=[]):
         """
