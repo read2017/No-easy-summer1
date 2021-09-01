@@ -2,6 +2,7 @@
 import requests
 import sys
 import typing
+import time
 sys.path.append('../src')
 from typing import List
 from typing import Dict
@@ -215,8 +216,49 @@ class GstoreConnector:
                 res = self.Post(strUrl, strPost)
             return res
 
+def csk(graph=[]):
+        edgeLinks={}
+        for gra in graph:
+            a,b=gra[0],gra[1]
+            addEdge(a, b,edgeLinks)  # 进入addEdge函数 把边加进去 注意上面已经读过一行 还需要读取边数edgeCount行
+        return edgeLinks
+
+def addEdge(a, b,edgeLinks):  # 该函数进行加边操作   构造一个完整的字典形如
+        # 上式为演示的该函数处理完的结果
+        if a not in edgeLinks:
+            edgeLinks[a] = set()
+        if b not in edgeLinks:
+            edgeLinks[b] = set()
+        edgeLinks[a].add(b)
+
+
+def Extraction_path(entity1, entity2, path=[],path1={}):
+        """
+        输出：两点之间的所有路径
+        """
+        # entity1=self.Graph[0].index(entity1)
+        # entity2=self.Graph[0].index(entity2)
+        # print('path',path)   取消注释查看当前path的元素
+        path = path + [entity1]
+        # print('path',path)   取消注释查看当前path的元素
+        if entity1 == entity2:
+            # print('回溯')
+            return [path]
+
+        paths = []
+        # 存储所有路径
+        #print(paths)
+        for node in path1[entity1]:
+            if node not in path:
+                ns = Extraction_path(node, entity2, path,path1)
+                #print(ns)
+                for n in ns:
+                    paths.append(n)
+                    #print(paths,'回溯')
+        return paths
+
     #查询持股公司
-def query_edges(u):
+def Query_Held_Company(u):
                 #''' 查询被持股公司\n 输入：持股人名\u 输出：被持股公司信息\res'''
                 # before you run this example, make sure that you have started up ghttp service (using bin/ghttp port)
         IP = "202.114.74.170"
@@ -246,7 +288,7 @@ def query_edges(u):
         return res
 
     #查询持股人及股权信息
-def query_Shareholder(u):
+def Query_Shareholder(u):
                         #''' 查询持股人\n 输入：被持股公司\u 输出：持股人信息\res'''
                 # before you run this example, make sure that you have started up ghttp service (using bin/ghttp port)
         IP = "202.114.74.170"
@@ -273,28 +315,34 @@ def query_Shareholder(u):
         res = gc.query("entity2","json",sparql,"GET")
         return res
     #查询持股路径
-def queryholders(start,end):
+def Query_Shareholding_Path(start,end):
                         #''' 查询持股路径\n 输入：持股人，被持股公司\u 输出：持股路径\path[]'''
             q1=queue.Queue()      #创建队列存放关联实体
             vis = {}    #空字典，标记已经遍历过的实体
             edge = {}       ## 空字典，存放路径图上的边
             subgraph=[] #存放未去杂点的路径子图
             path=[]        #创建列表存放路径
+            paths=[]
             q1.put(start)
             vis[start]=0
             vis[end]=0
             edge[start]=[]
             edge[end]=[]
-            while (not q1.empty() and q1.qsize()<=2000):#提取路径子图
+            t0=time.time()
+            while (not q1.empty()):#提取路径子图not q1.empty() and q1.qsize()<=2000复杂节点可加限制
                     u=q1.get()
                     #print(u)
-                    res=query_edges(u)
+                    res=Query_Held_Company(u)
                     #print(res)
                     subgraph.extend(res)#提取查询节点的List
                     #print(subgraph)
                     res1 = map(lambda item: item['associate_entity_name']['value'], res)
                     #print(res1)
-                    
+                    runningTime=time.time()-t0
+                    #print (runningTime)
+                    if(runningTime>=180):
+                        print("查询超时")
+                        break
                     for v in res1:
                             
                             if(not v in vis):
@@ -308,6 +356,7 @@ def queryholders(start,end):
                             #print(v)
                             #print(edge[v])
                     #print(edge["9a4b84fc-b51b-4829-a052-263997814567"])
+                    
             q2=queue.Queue()
             dict={}
             q2.put(end)
@@ -323,13 +372,20 @@ def queryholders(start,end):
                                     q2.put(v)
                                     path.append((v,u))
                         
-            print(len(path))
-            print (path)
+            #print(len(path))
+            #print (path)
             #print(edge["62a0feb2-979c-4688-98a0-4509b958945c"])
-            return path
-data = query_edges("冯首佳")
-print(data)
-    #print(type(data))
-data1=queryholders("交通银行股份有限公司","上海鑫景滨江投资发展有限公司")
+            path1=csk(path)
+            path2=[]
+            #print(path1)
+            paths=Extraction_path(start,end,path2,path1)
+            return paths
 
-    #print(len(data1))
+data = Query_Held_Company("冯首佳")
+print(data)
+data1= Query_Shareholder("长沙泰帮医疗科技有限公司")
+print(data1)
+    #print(type(data))"张宝世","呼伦贝尔市新村物流运输有限责任公司"
+data2=Query_Shareholding_Path("交通银行股份有限公司","上海鑫景滨江投资发展有限公司")
+print(data2)
+#print(len(data1))0
