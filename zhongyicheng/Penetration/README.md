@@ -11,10 +11,10 @@
 # Output
 `<dict>{
 'nodes':<list>[
-    <tuple>(eid,percent)
+    <dict>{'id','name','category','percent'}
 ],
 'links':<list>[
-    <tuple>(source,target,value)
+    <dict>{'source','target','value'}
 ]
 }
 `
