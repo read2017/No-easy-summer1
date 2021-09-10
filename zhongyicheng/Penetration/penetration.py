@@ -77,26 +77,48 @@ class Penetration:
     #t_running = time.time() - t_start
     #print('running time',t_running)
     #t_calc_s = time.time()
+    def getEntity(self,u):
+        sql = """
+    select * where
+    {{
+     ?e <file:///D:/d2rq-0.8.1/vocab/entity_id> "{id}" .
+     ?e <file:///D:/d2rq-0.8.1/vocab/entity_name> ?n .
+     optional {{?e <file:///D:/d2rq-0.8.1/vocab/entity_type> ?t .}}
+    }}""".format(id=u)
+        res = json.loads(self.gc.query(self.db,"json",sql,"GET"))['results']['bindings'][0]
+    #    commTot += time.time() - t_c
+        return res
     def calcTotalHolding(self,graph,id2n,n2id,target_n):
         result = []
-        col = []
-        row = []
-        data = []
-        for item in graph:
-            if(item[0]==item[1]):
-    #            print(id2n[item[0]],item)
-                continue
-            col.append(id2n[item[0]])
-            row.append(id2n[item[1]])
-            data.append(item[2])
-    #        if(item[2][0]>1):
-    #            raise Exception(item[2][0])
-        direct_hold_matrix = coo_matrix((data,(row,col)),shape=(len(id2n),len(id2n))).tocsc()
-        actual_hold = direct_hold_matrix.dot(inv(identity(len(id2n),format='csc')-direct_hold_matrix)).tocoo()
-    #    print('calc over')
-        for i,j,d in zip(actual_hold.row,actual_hold.col,actual_hold.data):
-            if(j == target_n):
-                result.append((n2id[i],d))
+        if(len(graph)):
+            col = []
+            row = []
+            data = []
+            for item in graph:
+                if(item[0]==item[1]):
+        #            print(id2n[item[0]],item)
+                    continue
+                col.append(id2n[item[0]])
+                row.append(id2n[item[1]])
+                data.append(item[2])
+        #        if(item[2][0]>1):
+        #            raise Exception(item[2][0])
+            direct_hold_matrix = coo_matrix((data,(row,col)),shape=(len(id2n),len(id2n))).tocsc()
+            actual_hold = direct_hold_matrix.dot(inv(identity(len(id2n),format='csc')-direct_hold_matrix)).tocoo()
+        #    print('calc over')
+            for i,j,d in zip(actual_hold.row,actual_hold.col,actual_hold.data):
+                if(j == target_n):
+                    eid = n2id[i]
+                    tmp = self.getEntity(eid)
+                    n = tmp['n']['value']
+                    t = tmp['t']['value'] if 't' in tmp else ''
+    #                result.append((n2id[i],d))
+                    result.append({'id':eid,'percent':d,'category':t,'name':n})
+
+        tmp = self.getEntity(n2id[target_n])
+        n = tmp['n']['value']
+        t = tmp['t']['value'] if 't' in tmp else ''
+        result.append({'id':n2id[target_n],'percent':d,'category':t,'name':n})
         return result
     #print('Total time',time.time() - t_start)
     #print('nodes',len(vis),'edges',len(subg),'query: {} {:.2%}'.format(getNeighborTot,getNeighborTot/t_running),'comm',commTot)
@@ -105,6 +127,6 @@ class Penetration:
         nodes = self.calcTotalHolding(graph,id2n,n2id,id2n[centerId])
         return {'nodes':nodes,
         'links':
-        graph
-    #    map(lambda item: {'source':item[0],'target':item[1],'value':item[2][0]},graph)
+    #    graph
+        list(map(lambda item: {'source':item[0],'target':item[1],'value':item[2]},graph))
         }
