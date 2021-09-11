@@ -1,11 +1,11 @@
 import sys
 sys.path.append('../src')
 import query
+import GstoreConnector
 IP = "202.114.74.170"
 Port = 9900
 import sys
 sys.path.append('../src')
-import GstoreConnector
 import json
 from queue import Queue
 import time
@@ -34,20 +34,13 @@ class DataDoor:
     d=DataDoor(IP, Port, username, password,entity1='交通银行股份有限公司')
     print(d.get_id())输出：被查询实体Id
     """
-    def __init__(self, IP, Port, username, password, entity1='',entity2=''):
-        self.IP = IP
-        self.Port = Port
-        self.username = username
-        self.password = password
-        self.entity1 = entity1
-        self.entity2=entity2
+    def __init__(self, IP, Port, username, password):
+        self.gc = GstoreConnector.GstoreConnector(IP, Port, username, password)
 
-    def get_data(self):
+    def get_data(self,entity1,entity2):
         """
         返回res：从gstore查询到的json数据
         """
-        entity1=self.entity1
-        entity2=self.entity2
         sparql = """
         select * where {{
                         ?entity <file:///D:/d2rq-0.8.1/vocab/entity_name> "{id1}".
@@ -59,22 +52,15 @@ class DataDoor:
                         ?associate_entity <file:///D:/d2rq-0.8.1/vocab/entity_id> ?associate_entity_id.
                         ?associate_entity <file:///D:/d2rq-0.8.1/vocab/entity_name> "{id2}".
                         }}""".format(id1=entity1, id2=entity2)
-        IP = self.IP
-        Port = self.Port
-        username = self.username
-        password = self.password
-        gc = GstoreConnector.GstoreConnector(IP, Port, username, password)
-        res = gc.query("entity2", "json", sparql, "GET")
+        res = self.gc.query("entity2", "json", sparql, "GET")
         #print(res)
         #print(type(res))
         return res
 
-    def get_dataA(self):
+    def get_dataA(self,entity2):
         """
                返回res：从gstore查询到的json数据
                """
-        entity1 = self.entity1
-        entity2 = self.entity2
         sparql = """
                                    select * where {
                                     ?entity <file:///D:/d2rq-0.8.1/vocab/entity_name>?entity_name.
@@ -87,22 +73,15 @@ class DataDoor:
                                     ?associate_entity <file:///D:/d2rq-0.8.1/vocab/entity_name> "%s".
                                    }
                                    """ % (entity2)
-        IP = self.IP
-        Port = self.Port
-        username = self.username
-        password = self.password
-        gc = GstoreConnector.GstoreConnector(IP, Port, username, password)
-        res = gc.query("entity2", "json", sparql, "GET")
+        res = self.gc.query("entity2", "json", sparql, "GET")
         #print(res)
         #print(type(res))
         return res
 
-    def get_dataB(self):
+    def get_dataB(self,entity1):
         """
                返回res：从gstore查询到的json数据
                """
-        entity1 = self.entity1
-        entity2 = self.entity2
         sparql = """
                                    select * where {
                                     ?entity <file:///D:/d2rq-0.8.1/vocab/entity_name>"%s".
@@ -115,23 +94,19 @@ class DataDoor:
                                     ?associate_entity <file:///D:/d2rq-0.8.1/vocab/entity_name> ?associate_entity_name.
                                    }
                                    """ % (entity1)
-        IP = self.IP
-        Port = self.Port
-        username = self.username
-        password = self.password
-        gc = GstoreConnector.GstoreConnector(IP, Port, username, password)
-        res = gc.query("entity2", "json", sparql, "GET")
+        res = self.gc.query("entity2", "json", sparql, "GET")
         #print(res)
         #print(type(res))
         return res
 
-    def data_process(self):
+    def data_process(self,entity1,entity2):
         """
         Iuput:由gstore查询得到的数据文件
         Return：二者之间的股权
         """
-        result=self.get_data()
+        result=self.get_data(entity1,entity2)
         res = json.loads(result)
+        #print(result)
         #print(res)
         # data = res['head']['vars']['hold_amout']
         #datas = res['results']['bindings']
@@ -144,81 +119,78 @@ class DataDoor:
             data=res['results']['bindings']
             #print(data)
             if data:
-                power=float(data[0]['hold_stake']['value'])
+                po=float(data[0]['hold_stake']['value'])
+                nodes=[]
+                nodes.append({'id':data[0]['entity_id']['value'],'name':entity1,'category':'不详'})
+                nodes.append({'id':data[0]['associate_entity_id']['value'],'name':entity2,'category':'不详'})
                 #print(power)
-                return power
+                power={'source':data[0]['associate_entity_id']['value'],'target':data[0]['entity_id']['value'],'value':po}
+                return power,nodes
         except:
             pass
         #return power
 
-    def data_processA(self):
+    def data_processA(self,entity2):
         """
         Iuput:由gstore查询得到的数据文件
         Return：二者之间的股权
         """
-        result=self.get_dataA()
+        result=self.get_dataA(entity2)
         res = json.loads(result)
         data=[]
         #print(res)
         try:
             datas = res['results']['bindings']
             for da in datas:
-                data.append([da['entity_name']['value'],self.entity2,float(da['hold_stake']['value'])])
+                data.append([da['entity_name']['value'],entity2,float(da['hold_stake']['value'])])
             #print(data)
             return data
         except:
             pass
         return data
 
-    def data_processB(self):
+    def data_processB(self,entity1):
         """
         Iuput:由gstore查询得到的数据文件
         Return：二者之间的股权
         """
-        result = self.get_dataB()
+        result = self.get_dataB(entity1)
         res = json.loads(result)
         data = []
         #print(res)
         try:
             datas = res['results']['bindings']
             for da in datas:
-                data.append([self.entity1, da['associate_entity_name']['value'],float(da['hold_stake']['value'])])
+                data.append([entity1, da['associate_entity_name']['value'],float(da['hold_stake']['value'])])
             #print(data)
             return data
         except:
             pass
 
-    def get_id(self):
+    def get_id(self,entity1):
         """
                       返回res：从gstore查询到的json数据
                       """
-        entity1 = self.entity1
         sparql = """
                                           select * where {
                                            ?entity <file:///D:/d2rq-0.8.1/vocab/entity_name>"%s".
                                            ?entity <file:///D:/d2rq-0.8.1/vocab/entity_id> ?entity_id.
                                           }
                                           """ % (entity1)
-        IP = self.IP
-        Port = self.Port
-        username = self.username
-        password = self.password
-        gc = GstoreConnector.GstoreConnector(IP, Port, username, password)
-        res = gc.query("entity2", "json", sparql, "GET")
+        res = self.gc.query("entity2", "json", sparql, "GET")
         ids=json.loads(res)['results']['bindings']
         id=[]
         for i in ids:
-            id.append(i['entity_id']['value'])
+            id.append({'id':i['entity_id']['value'],'name':entity1,'category':'不详'})
         # print(res)
         # print(type(res))
         #print(id)
         return id
 
-    def get_Son_id(self):
+    def get_Son_id(self,entity1):
         """
         输出所有子节点id（list)
         """
-        entity1 = self.entity1
         sparql = """
                                    select * where {
                                     ?entity <file:///D:/d2rq-0.8.1/vocab/entity_name>"%s".
@@ -231,43 +203,30 @@ class DataDoor:
                                     ?associate_entity <file:///D:/d2rq-0.8.1/vocab/entity_name> ?associate_entity_name.
                                    }
                                    """ % (entity1)
-        IP = self.IP
-        Port = self.Port
-        username = self.username
-        password = self.password
-        gc = GstoreConnector.GstoreConnector(IP, Port, username, password)
-        res = gc.query("entity2", "json", sparql, "GET")
+        res = self.gc.query("entity2", "json", sparql, "GET")
+        #print(res)
         Son_ids=json.loads(res)['results']
         Son_id = []
         if Son_ids:
             son=Son_ids['bindings']
             for i in son:
-                Son_id.append(i['associate_entity_id']['value'])
-        return Son_id
+                Son_id.append({'id':i['associate_entity_id']['value'],'name':i['associate_entity_name']['value'],'category':'E'})
+            return Son_id
         # print(res)
         # print(type(res))
 
-class pentration:
-    """
-    股权穿透代码
-    好像有点问题：股权层数不够的会出错。
-    """
-    def __init__(self,username,password):
-        self.t_start = time.time()
-        self.IP = "localhost"
-        self.Port = 9900
-        self.username = username
-        self.password = password
+class Penetration:
+    def __init__(self, host=IP, port=Port, dbname='entity2', username="root", password="123456"):
+        self.gc = GstoreConnector.GstoreConnector(host, port, username, password)
+        self.gc.load(dbname, 'POST')
+        self.db = dbname
 
-    def getNeighbor(self,u):
+    def getNeighbor(self, u):
         global commTot
         global getNeighborTot
         global maxresults
-        t_t = time.time()
-        t_c = time.time()
-        gc = GstoreConnector.GstoreConnector(self.IP, self.Port, self.username, self.password)
-        db = "entity2"
-        gc.load(db, "POST")
+        #        t_t = time.time()
+        #        t_c = time.time()
         sql = """
     select ?id2 ?stake where
     {{
@@ -276,20 +235,16 @@ class pentration:
      ?hold <file:///D:/d2rq-0.8.1/vocab/hold_stake> ?stake .
     }}""".format(id=u)
         #    print(sql)
-        res = json.loads(gc.query(db, "json", sql, "GET"))['results']['bindings']
+        res = json.loads(self.gc.query(self.db, "json", sql, "GET"))['results']['bindings']
         #    maxresults = max(maxresults,len(res))
         #    commTot += time.time() - t_c
         #    getNeighborTot += time.time()-t_t
         return res
 
-    def getHoldInfo(self,item):
+    def getHoldInfo(self, item):
         return float(item['stake']['value'])
 
-    # vis = {}
-    # subg = []
-    # id2n = {}
-    # n2id = {}
-    def queryholders(self,hid, depth_limit=10):
+    def queryholders(self, hid, depth_limit=10):
         max_d = 0
         #    max_u = ""
         subg = []
@@ -326,37 +281,60 @@ class pentration:
     # t_running = time.time() - t_start
     # print('running time',t_running)
     # t_calc_s = time.time()
-    def calcTotalHolding(self,graph, id2n, n2id, target_n):
+    def getEntity(self, u):
+        sql = """
+    select * where
+    {{
+     ?e <file:///D:/d2rq-0.8.1/vocab/entity_id> "{id}" .
+     ?e <file:///D:/d2rq-0.8.1/vocab/entity_name> ?n .
+     optional {{?e <file:///D:/d2rq-0.8.1/vocab/entity_type> ?t .}}
+    }}""".format(id=u)
+        res = json.loads(self.gc.query(self.db, "json", sql, "GET"))['results']['bindings'][0]
+        #    commTot += time.time() - t_c
+        return res
+
+    def calcTotalHolding(self, graph, id2n, n2id, target_n):
         result = []
-        col = []
-        row = []
-        data = []
-        for item in graph:
-            if (item[0] == item[1]):
-                #            print(id2n[item[0]],item)
-                continue
-            col.append(id2n[item[0]])
-            row.append(id2n[item[1]])
-            data.append(item[2])
-        #        if(item[2][0]>1):
-        #            raise Exception(item[2][0])
-        direct_hold_matrix = coo_matrix((data, (row, col)), shape=(len(id2n), len(id2n))).tocsc()
-        actual_hold = direct_hold_matrix.dot(inv(identity(len(id2n), format='csc') - direct_hold_matrix)).tocoo()
-        print('calc over')
-        for i, j, d in zip(actual_hold.row, actual_hold.col, actual_hold.data):
-            if (j == target_n):
-                result.append((n2id[i], d))
+        if (len(graph)):
+            col = []
+            row = []
+            data = []
+            for item in graph:
+                if (item[0] == item[1]):
+                    #            print(id2n[item[0]],item)
+                    continue
+                col.append(id2n[item[0]])
+                row.append(id2n[item[1]])
+                data.append(item[2])
+            #        if(item[2][0]>1):
+            #            raise Exception(item[2][0])
+            direct_hold_matrix = coo_matrix((data, (row, col)), shape=(len(id2n), len(id2n))).tocsc()
+            actual_hold = direct_hold_matrix.dot(inv(identity(len(id2n), format='csc') - direct_hold_matrix)).tocoo()
+            #    print('calc over')
+            for i, j, d in zip(actual_hold.row, actual_hold.col, actual_hold.data):
+                if (j == target_n):
+                    eid = n2id[i]
+                    tmp = self.getEntity(eid)
+                    n = tmp['n']['value']
+                    t = tmp['t']['value'] if 't' in tmp else ''
+                    #                result.append((n2id[i],d))
+                    result.append({'id': eid, 'percent': d, 'category': t, 'name': n})
+
+        tmp = self.getEntity(n2id[target_n])
+        n = tmp['n']['value']
+        t = tmp['t']['value'] if 't' in tmp else ''
+        result.append({'id': n2id[target_n], 'percent': d, 'category': t, 'name': n})
         return result
 
     # print('Total time',time.time() - t_start)
     # print('nodes',len(vis),'edges',len(subg),'query: {} {:.2%}'.format(getNeighborTot,getNeighborTot/t_running),'comm',commTot)
-    def getPenetrationNetwork(self,centerId, dateFrom=None, dateTo=None, level=10):
+    def getPenetrationNetwork(self, centerId, dateFrom=None, dateTo=None, level=10):
         graph, id2n, n2id = self.queryholders(centerId, level)
         nodes = self.calcTotalHolding(graph, id2n, n2id, id2n[centerId])
         return {'nodes': nodes,
                 'links':
-                    graph
-                #    map(lambda item: {'source':item[0],'target':item[1],'value':item[2][0]},graph)
+                #    graph
+                    list(map(lambda item: {'source': item[0], 'target': item[1], 'value': item[2]}, graph))
                 }
 
 class WeakPath:
@@ -372,45 +350,12 @@ class WeakPath:
     """
     def __init__(self,graph):
         self.graph=graph
-        self.Graph=self.data_process()
         self.edgeLinks=self.csk()
-
-    def data_process(self):
-        """
-        将输入图预处理
-        """
-        Node=[]
-        #Eme=[]
-        i=0
-        #for gra in self.graph:
-        #    if gra[0] not in Node:
-        #        Node.append(gra[0])
-        #    if gra[1] not in Node:
-        #        Node.append(gra[1])
-        for gra in self.graph:
-            Node.append(gra[0])
-            Node.append(gra[1])
-        Node=set(Node)
-        #for gra in self.graph:
-        #    k=[]
-        #    k.append(Node.index(gra[0]))
-        #   k.append(Node.index(gra[1]))
-        #    k.append(gra[2])
-        #    Eme.append(k)
-        size=len(Node)
-        edgeCount=len(self.graph)
-        #edgeCount=len(Eme)
-        print("节点数为:%d" % size, "边数为:%d" % edgeCount)
-        Graph=[]
-        Graph.append(Node)
-        #Graph.append(Eme)
-        Graph.append(self.graph)
-        return Graph
 
     def csk(self):
         edgeLinks={}
-        for gra in self.Graph[1]:
-            a,b=gra[0],gra[1]
+        for gra in self.graph['links']:
+            a,b=gra['source'],gra['target']
             self.addEdge(a, b,edgeLinks)  # 进入addEdge函数 把边加进去 注意上面已经读过一行 还需要读取边数edgeCount行
         return edgeLinks
 
@@ -459,49 +404,96 @@ class WeakPath:
         """
         paths=[]
         if entity1==entity2:#自身对自身的控制权,默认为1
-            for gra in self.graph:
+            for gra in self.graph['links']:
                 #print(gra)
-                if entity1==gra[0] and gra[1]==entity2:
+                if entity1==gra['source'] and gra['target']==entity2:
                     #print(111111)
-                    control=gra[2]
+                    control=gra['value']
             return 1
         else:
             paths=self.Check(entity1,entity2)
             if paths:
+                pathList=[]
                 control=0
                 #print(paths)
                 for path in paths:
+                    p=[]
                     weak = 0
                     link=[]
                     for i in range(len(path)-1):
                         x=0
-                        for gra in self.graph:
-                            if gra[0]==path[i] and gra[1]==path[i+1]:
-                                link.append(gra[2])
+                        for gra in self.graph['links']:
+                            if gra['source']==path[i] and gra['target']==path[i+1]:
+                                link.append(gra['value'])
+                                p.append(gra)
                                 x=1
                                 #print(gra[2])
                         if x==0:
                             paths.remove(path)
                             link.clear()
+                            p.clear()
                             break
                     if link:
                         weak=min(link)
+                        pathList=pathList+p
                     control = control + weak
                 #print(paths)
-                return control,paths
+                return control,pathList
+
+    def calculationAB(self,entity1,entity2):
+        """
+        输出entity1对entity2的控制权
+        """
+        paths=[]
+        if entity1==entity2:#自身对自身的控制权,默认为1
+            for gra in self.graph['links']:
+                #print(gra)
+                if entity1==gra['source'] and gra['target']==entity2:
+                    #print(111111)
+                    control=gra['value']
+            return 1
+        else:
+            paths=self.Check(entity1,entity2)
+            if paths:
+                pathList=[]
+                control=0
+                #print(paths)
+                for path in paths:
+                    p=[]
+                    weak = 0
+                    link=[]
+                    for i in range(len(path)-1):
+                        x=0
+                        for gra in self.graph['links']:
+                            if gra['source']==path[i] and gra['target']==path[i+1]:
+                                link.append(gra['value'])
+                                p.append(gra)
+                                x=1
+                                #print(gra[2])
+                        if x==0:
+                            paths.remove(path)
+                            link.clear()
+                            p.clear()
+                            break
+                    if link:
+                        weak=min(link)
+                        pathList.append({'controlPower':weak,'links':p})
+                    control = control + weak
+                #print(paths)
+                return control,pathList
 
     def calcuAll(self):
         """
         输出所有结点两两间的控股
         """
-        Node=self.Graph[0]
+        Node=self.graph['nodes']
         Allcontrol=[]
         Allpath=[]
         for node1 in Node:
             for node2 in Node:
                 try:
-                    [control,path]=self.calculation(node1,node2)
-                    Allcontrol.append([node1,node2,control])
+                    [control,path]=self.calculation(node1['id'],node2['id'])
+                    Allcontrol.append({'source':node1['id'],'target':node2['id'],'control':control})
                     Allpath.append(path)
                 except:
                     pass
@@ -544,29 +536,42 @@ class ControlAB:
         """
         #if self.exist==True:
         paths = query.Query_Holder(self.entity1, self.entity2)
+        #print(1111)
         if paths:
             self.exist=True
             graph=[]
+            allNode=[]
+            ControlA = DataDoor(IP, Port, self.username, self.password)
             for path in paths:
                 #print(path[0])
                 #print(path[1])
-                ControlA = DataDoor(IP, Port, self.username, self.password, path[0],path[1])
-                power=ControlA.data_process()
-                print(power)
+                power,nodes=ControlA.data_process(path[0],path[1])
+                if path[0]==self.entity1:
+                    id_1=nodes[0]['id']
+                if path[1]==self.entity1:
+                    id_1=nodes[1]['id']
+                if path[0]==self.entity2:
+                    id_2=nodes[0]['id']
+                if path[1]==self.entity2:
+                    id_2=nodes[1]['id']
+                #print(power)
                 if power:
-                    graph.append([path[0],path[1],power])
+                    graph.append(power)
+                    allNode=allNode+nodes
             #print(graph)
-            WeakCacul=WeakPath(graph)
-            conAB=WeakCacul.calculation(self.entity1,self.entity2)[0]
-            allNodes=WeakCacul.Graph[0]
+            WeakCacul=WeakPath({'nodes':allNode,'links':graph})
+            conAB=WeakCacul.calculationAB(id_2,id_1)
             control=[]
-            for node in allNodes:
-                if node!=self.entity2:
-                    con=WeakCacul.calculation(node,self.entity2)[0]
-                    control.append(con)
-            if max(control)==conAB:
-                self.cotntrol=True
-                return conAB
+            #allNode=set(allNode)
+            #for node in allNode:
+            #    con=WeakCacul.calculation(node['id'],self.entity2)[0]
+            #    if con:
+            #        control.append(con)
+            #if max(control)==conAB[0]:
+            #    self.cotntrol=True
+            #    return conAB
+            result={'totalControlPower':conAB[0],"pathList":conAB[1],'nodes':allNode}
+            return result
         else:
             pass
 
@@ -582,63 +587,26 @@ class ControlA:
         self.username=username
         self.password=password
 
-    def getFather(self,layer):
-        """
-        向外提取父节点
-        layer:层数
-        输出：股权图
-        """
-        if layer<0:
-            print('Error:层数应大于0')
-        else:
-            #entity=self.entity
-            nodes=[]#所有点
-            nodes.append(self.entity)
-            l=[]
-            graph=[]#所有边
-            while layer>0:
-                for node in nodes:
-                    print(node)
-                    print(len(nodes))
-                    ControlA = DataDoor(IP, Port, self.username, self.password, entity2=node)
-                    data = ControlA.data_processA()
-                    print(data)
-                    if data:
-                        for da in data:
-                            l.append(da[0])
-                            #print(da[0])
-                    print(node)
-                layer = layer-1
-                nodes=nodes+l
-                print(layer)
-            for node1 in nodes:
-                for node2 in nodes:
-                    con12= DataDoor(IP, Port, self.username, self.password,node1, node2)
-                    power=con12.data_process()
-                    if power:
-                        #print(power)
-                        graph.append([node1,node2,power])
-            print(graph)
-            return graph
-
     def data_process(self,layer):
         """
         通过最弱边算法得到控制权
         """
         #graph=self.getFather(layer)
-        K=DataDoor(IP, Port, self.username, self.password, self.entity)
-        ids=K.get_id()
+        K=DataDoor(IP, Port, self.username, self.password)
+        ids=K.get_id(self.entity)
         print('获取到id')
         control=[]
+        nodes=[]
         for id in ids:
-            PE=pentration(self.username,self.password)
-            all_graph=PE.getPenetrationNetwork(id,level=layer)
-            graph=all_graph['links']
+            PE=Penetration()
+            all_graph=PE.getPenetrationNetwork(id['id'],level=layer)
+            nodes=nodes+all_graph['nodes']
             print('数据加载完毕,开始计算。')
-            WeakCacul=WeakPath(graph)
+            WeakCacul=WeakPath(all_graph)
             [con,path]=WeakCacul.calcuAll()
-            control.append(con)
-        return control
+            control=control+con
+        data={'nodes':nodes,'links':control}
+        return data
 
 class ControlFull:
     """
@@ -662,10 +630,9 @@ class ControlFull:
         if layer<0:
             print('Error:层数应大于0')
         else:
-            ControlA = DataDoor(IP, Port, self.username, self.password, entity1=self.entity)
-            son=ControlA.get_Son_id()
-            id = DataDoor(IP, Port, self.username, self.password, entity1=self.entity)
-            entity_ids = id.get_id()
+            ControlA = DataDoor(IP, Port, self.username, self.password)
+            son=ControlA.get_Son_id(self.entity)
+            entity_ids = ControlA.get_id(self.entity)
             print('获取到id')
             nodes=[]
             nodes.append(entity_ids)#所有点
@@ -675,91 +642,60 @@ class ControlFull:
             while layer>1:
                 sonnodes = []
                 k=1#计数单位
-                for node in nodes[k]:
+                for node in son:
                     #ControlA = DataDoor(IP, Port, self.username, self.password, entity1=node)
                     #print('开始获取子节点')
-                    datas=query.Query_associate_entity_id(node)
-                    try:
-                        datalist = json.loads(datas)['results']['bindings']
-                        #print(111)
-                        for data in datalist:
-                            sonnodes.append(data['associate_entity_id']['value'])
-                    except:
-                        pass
+                    datas=ControlA.get_Son_id(node['name'])
+                    if datas:
+                        sonnodes.append(datas)
                 layer=layer-1
-                nodes.append(sonnodes)
+                if sonnodes:
+                    nodes.append(sonnodes)
                 k=k+1
             print('子节点提取完毕')
             return nodes
-
-    def getFather(self,layer):
-        """
-        向外提取父节点
-        layer:层数
-        输出：股权图
-        """
-        if layer<0:
-            print('Error:层数应大于0')
-        else:
-            id=DataDoor(IP, Port, self.username, self.password, entity1=self.entity)
-            entity=id.get_id()
-            nodes=[entity]#所有点
-            l=[]
-            graph=[]#所有边
-            while layer>0:
-                for node in nodes:
-                    ControlA = DataDoor(IP, Port, self.username, self.password, entity2=node)
-                    data = ControlA.data_processA()
-                    if data:
-                        for da in data:
-                            #print(da[0])
-                            l.append(da[0])
-                layer=layer-1
-                nodes=nodes+l
-                #print(layer)
-            for node1 in nodes:
-                for node2 in nodes:
-                    con12= DataDoor(IP, Port, self.username, self.password,node1, node2)
-                    power=con12.data_process()
-                    if power:
-                        graph.append([node1,node2,power])
-                        #print(power)
-            print('父节点提取完毕。')
-            return graph
-
 
     def data_process(self,layer_son,layer_father):
         """
         输出：属于被查询实体控制系的点，及他们之间的控制权指数
         """
         Sonnodes=self.getSon(layer_son)
+        #print(Sonnodes)
         #print('子节点提取完毕')
         entity_ids=Sonnodes[0]
         #print(entity_ids)
-        Department=[]
+        #print(entity_ids)
+        links=[]
+        nodes=[]
         k=1
         for layer in Sonnodes[1:]:
             print("第{}层，共有{}个节点".format(k, len(layer)))
             k=k+1
             for node in layer:
-                PE=pentration(self.username,self.password)
-                graph=PE.getPenetrationNetwork(node,level=layer_father)['links']
+                PE=Penetration()
+                graph=PE.getPenetrationNetwork(node['id'],level=layer_father)
                 #print(graph)
                 WeakCacul=WeakPath(graph)
                 control=[]
-                for no in WeakCacul.Graph[0]:
-                    if no!=node:
-                        con=WeakCacul.calculation(node,no)[0]
+                for no in graph['nodes']:
+                    try:
+                        con=WeakCacul.calculation(node['id'],no['id'])
                         #print(no)
-                        control.append(con)
+                        control.append(con[0])
+                    except:
+                        pass
                 print(control)
                 for entity_id in entity_ids:
                     try:
-                        conAB=WeakCacul.calculation(node,entity_id)[0]
+                        conAB=WeakCacul.calculation(node['id'],entity_id['id'])
                         #print(entity_id)
-                        print(conAB)
-                        if conAB == max(control):
-                            Department.append([entity_id, node, conAB])
+                        #print(conAB)
+                        if conAB[0] == max(control):
+                            node['controlPower']=conAB[0]
+                            links=links+conAB[1]
+                            nodes.append(node)
+                            Department={'nodes':nodes,'links':links}
+                            #print(1)
                     except:
                         pass
             #班扎夫指数计算
@@ -784,29 +720,36 @@ if __name__=='__main__':
     uesrname = 'root'
     password = '123456'
     #entity2='上海山阳电讯器材厂'
-    #x=DataDoor(IP,Port,uesrname,password,'常玉英')
-    #print(x.get_id())
+    #x=DataDoor(IP,Port,uesrname,password)
+    #print(x.data_process('常玉英', '上海山阳电讯器材厂'))
+    #print(x.get_Son_id('常玉英'))
+    #print(x.get_Son_id('常玉英'))
     #for data in x.data_processB():
     #    if data[1]==entity2:
     #        print(data)
+    #x=Penetration(IP,Port)
+    #print(x.getPenetrationNetwork('9e7a3a48-00ae-4763-b15c-29adc9603245',3))
 
     #计算二者之间控股示例：第一页面
-    #controlAB=ControlAB('常玉英','上海山阳电讯器材厂',uesrname,password)
-    #AB=controlAB.data_process()
-    #print(AB)
+    controlAB=ControlAB('常玉英','上海山阳电讯器材厂',uesrname,password)
+    AB=controlAB.data_process()
+    print(AB)
     #exist=controlAB.exist
     #print(exist)
     #control=controlAB.cotntrol
     #print(control)
 
     #计算实体控制权图代码示例：第二页面
-    controlA=ControlA('上海山阳电讯器材厂',uesrname,password)
-    data=controlA.data_process(5)#向外提取5层子图
-    print(data)
+    #controlA=ControlA('上海山阳电讯器材厂',uesrname,password)
+    #data=controlA.data_process(5)#向外提取5层子图
+    #print(data)
 
     #计算控制系代码示例；第三页面
     #controlB=ControlFull('常玉英',uesrname,password)
     #print(len(controlB.getSon(2)))
     #B=controlB.data_process(1,3)#向内提取一层
     #print(B)
-
+    #graph={'nodes': [{'id': '028e78ef59d803be28cd3b451153c662', 'percent': 1.0, 'category': '自然人', 'name': '常玉英'}, {'id': '31a55c18-e90d-4f41-9e6d-92d153933c48', 'percent': 1.0, 'category': '', 'name': '宁夏玉龙福康假肢矫形器装配服务中心(有限公司)'}], 'links': [{'source': '31a55c18-e90d-4f41-9e6d-92d153933c48', 'target': '028e78ef59d803be28cd3b451153c662', 'value': 1.0}]}
+    #Weak=WeakPath(graph)
+    #print(Weak.edgeLinks)
+    #print(Weak.calculationAB('31a55c18-e90d-4f41-9e6d-92d153933c48','028e78ef59d803be28cd3b451153c662'))
