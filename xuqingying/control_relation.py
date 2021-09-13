@@ -639,10 +639,10 @@ class ControlFull:
             nodes.append(son)
             #sonnodes=[]
             #graph=[]#所有边
+            k = 1  # 计数单位
             while layer>1:
                 sonnodes = []
-                k=1#计数单位
-                for node in son:
+                for node in nodes[k]:
                     #ControlA = DataDoor(IP, Port, self.username, self.password, entity1=node)
                     #print('开始获取子节点')
                     datas=ControlA.get_Son_id(node['name'])
@@ -651,7 +651,44 @@ class ControlFull:
                 layer=layer-1
                 if sonnodes:
                     nodes.append(sonnodes)
-                k=k+1
+                    k=k+1
+            print('子节点提取完毕')
+            return nodes
+
+    def getSonA(self,layer):#根据id查询
+        """
+        向内提取子节点
+        layer:层数
+        输出：所有子节点
+        """
+        if layer<0:
+            print('Error:层数应大于0')
+        else:
+            nodes=[]
+            nodes.append([self.entity])#所有点
+            #sonnodes=[]
+            #graph=[]#所有边
+            k = 0
+            while layer>0:
+                sonnodes = []
+                for node in nodes[k]:
+                    #print(node)
+                    #print(k)
+                    #ControlA = DataDoor(IP, Port, self.username, self.password, entity1=node)
+                    #print('开始获取子节点')
+                    res = query.Query_associate_entity_id(node)
+                    #print(res)
+                    try:
+                        sons = json.loads(res)['results']['bindings']
+                        for son in sons:
+                            sonnodes.append(son['associate_entity_id']['value'])
+                    except:
+                        pass
+                if sonnodes:
+                    nodes.append(sonnodes)
+                    k = k + 1
+                layer=layer-1
+
             print('子节点提取完毕')
             return nodes
 
@@ -716,6 +753,70 @@ class ControlFull:
             #    cons.append({'name':isi,'control':control_A[index][leng-1]})
         return Department
 
+    def data_processA(self,layer_son,layer_father):
+        """
+        输出：属于被查询实体控制系的点，及他们之间的控制权指数
+        """
+        Sonnodes=self.getSonA(layer_son)
+        print(Sonnodes)
+        #print('子节点提取完毕')
+        entity_id=Sonnodes[0][0]
+        #print(entity_ids)
+        #print(entity_id)
+        links=[]
+        nodes=[]
+        k=1
+        for layer in Sonnodes[1:]:
+            print("第{}层，共有{}个节点".format(k, len(layer)))
+            k=k+1
+            for node in layer:
+                PE=Penetration()
+                graph=PE.getPenetrationNetwork(node,level=layer_father)
+                #print(graph)
+                WeakCacul=WeakPath(graph)
+                control=[]
+                for no in graph['nodes']:
+                    try:
+                        if no['id']==node:
+                            Node=no
+                            print(Node)
+                        con=WeakCacul.calculation(node,no['id'])
+                        #print(no)
+                        control.append(con[0])
+                    except:
+                        pass
+                print(control)
+                try:
+                    conAB=WeakCacul.calculation(node,entity_id)
+                    #print(entity_id)
+                    print(conAB)
+                    if conAB[0] == max(control):
+                        Node['controlPower']=conAB[0]
+                        links=links+conAB[1]
+                        nodes.append(Node)
+                except:
+                    pass
+        Department={'nodes':nodes,'links':links}
+        return Department
+
+            #班扎夫指数计算
+            #id1.append(self.entity)
+            #leng = len(id1)
+            #A = np.empty(leng, leng)
+            #for i in range(leng - 1):
+            #    for j in range(leng - 1):
+            #        if id1[i]==self.entity:
+            #            index=i
+            #        ControlA = DataDoor(IP, Port, username, password, id1[i], id1[j])
+            #        ControlA.get_data()
+            #        data[i][j] = ControlA.data_process()
+            #con = bz.Banzhaf0(A, [[1] * leng] * leng, [1 / (2 ** leng)] * (2 ** leng))
+            #con.float_change()
+            #control_A = con.Banzhaf()
+            #if control_A[index][leng-1]==max(control_A[:,leng-1]):
+            #    cons.append({'name':isi,'control':control_A[index][leng-1]})
+
+
 if __name__=='__main__':
     uesrname = 'root'
     password = '123456'
@@ -731,9 +832,9 @@ if __name__=='__main__':
     #print(x.getPenetrationNetwork('9e7a3a48-00ae-4763-b15c-29adc9603245',3))
 
     #计算二者之间控股示例：第一页面
-    controlAB=ControlAB('常玉英','上海山阳电讯器材厂',uesrname,password)
-    AB=controlAB.data_process()
-    print(AB)
+    #controlAB=ControlAB('常玉英','上海山阳电讯器材厂',uesrname,password)
+    #AB=controlAB.data_process()
+    #print(AB)
     #exist=controlAB.exist
     #print(exist)
     #control=controlAB.cotntrol
@@ -745,10 +846,10 @@ if __name__=='__main__':
     #print(data)
 
     #计算控制系代码示例；第三页面
-    #controlB=ControlFull('常玉英',uesrname,password)
+    controlB=ControlFull('3ac25a5e343954e379f42c4d8fdbafff',uesrname,password)
     #print(len(controlB.getSon(2)))
-    #B=controlB.data_process(1,3)#向内提取一层
-    #print(B)
+    B=controlB.data_processA(3,3)#向内提取一层
+    print(B)
     #graph={'nodes': [{'id': '028e78ef59d803be28cd3b451153c662', 'percent': 1.0, 'category': '自然人', 'name': '常玉英'}, {'id': '31a55c18-e90d-4f41-9e6d-92d153933c48', 'percent': 1.0, 'category': '', 'name': '宁夏玉龙福康假肢矫形器装配服务中心(有限公司)'}], 'links': [{'source': '31a55c18-e90d-4f41-9e6d-92d153933c48', 'target': '028e78ef59d803be28cd3b451153c662', 'value': 1.0}]}
     #Weak=WeakPath(graph)
     #print(Weak.edgeLinks)
