@@ -215,6 +215,33 @@ class DataDoor:
         # print(res)
         # print(type(res))
 
+    def getchildren(self,entity1):
+        """
+        根据输入节点id，输出所有子节点信息
+        """
+        sparql = """
+        select * where {{
+                        ?hold <file:///D:/d2rq-0.8.1/vocab/hold_head_id> "{id1}".
+                        ?hold <file:///D:/d2rq-0.8.1/vocab/hold_amount> ?hold_amount.
+                        ?hold <file:///D:/d2rq-0.8.1/vocab/hold_stake> ?hold_stake.
+                        ?hold <file:///D:/d2rq-0.8.1/vocab/hold_tail_id> ?associate_entity_id.
+                        ?associate_entity <file:///D:/d2rq-0.8.1/vocab/entity_id> ?associate_entity_id.
+                        ?associate_entity <file:///D:/d2rq-0.8.1/vocab/entity_name> ?associate_entity_name.
+                        }}""".format(id1=entity1)
+        res = self.gc.query("entity2", "json", sparql, "GET")
+        # print(res)
+        Children_ids = json.loads(res)['results']
+        Children_id = []
+        links=[]
+        if Children_ids:
+            child_list = Children_ids['bindings']
+            for i in child_list:
+                Children_id.append({'id': i['associate_entity_id']['value'], 'name': i['associate_entity_name']['value'],
+                               'category': 'E'})
+                links.append({'source':i['associate_entity_id']['value'],'target':entity1,'value':float(i['hold_stake']['value'])})
+            Children={'nodes':Children_id,'links':links}
+            return Children
+
 class Penetration:
     def __init__(self, host=IP, port=Port, dbname='entity2', username="root", password="123456"):
         self.gc = GstoreConnector.GstoreConnector(host, port, username, password)
@@ -456,6 +483,7 @@ class WeakPath:
             paths=self.Check(entity1,entity2)
             if paths:
                 pathList=[]
+                LINKs=[]
                 control=0
                 #print(paths)
                 for path in paths:
@@ -478,9 +506,10 @@ class WeakPath:
                     if link:
                         weak=min(link)
                         pathList.append({'controlPower':weak,'links':p})
+                        LINKs=LINKs+p
                     control = control + weak
                 #print(paths)
-                return control,pathList
+                return control,pathList,LINKs
 
     def calcuAll(self):
         """
@@ -570,7 +599,7 @@ class ControlAB:
             #if max(control)==conAB[0]:
             #    self.cotntrol=True
             #    return conAB
-            result={'totalControlPower':conAB[0],"pathList":conAB[1],'nodes':allNode}
+            result={'totalControlPower':conAB[0],"pathList":conAB[1],'nodes':allNode,'links':conAB[2]}
             return result
         else:
             pass
@@ -816,28 +845,99 @@ class ControlFull:
             #if control_A[index][leng-1]==max(control_A[:,leng-1]):
             #    cons.append({'name':isi,'control':control_A[index][leng-1]})
 
+class ControlWeb:
+    def __init__(self,entity,username,password):
+        self.entity=entity
+        self.username=username
+        self.password=password
+
+    def control_parents(self,layer):
+        """
+        通过最弱边算法得到控制权
+        """
+        #graph=self.getFather(layer)
+        Nodes=[]
+        links=[]
+        PE=Penetration()
+        all_graph=PE.getPenetrationNetwork(self.entity,level=layer)
+        nodes=all_graph['nodes']
+        #print('数据加载完毕,开始计算。')
+        #print(all_graph)
+        for node in nodes:
+            WeakCacul=WeakPath(all_graph)
+            try:
+                [con,path]=WeakCacul.calculation(self.entity,node['id'])
+                node['controlPower']=con
+                Nodes.append(node)
+                links=links+path
+            except:
+                pass
+        data={'nodes':Nodes,'links':links}
+        return data
+
+    def get_childgraph(self,layer):
+        """
+                向内提取子节点
+                layer:层数
+                输出：所有子节点
+                """
+        if layer < 0:
+            print('Error:层数应大于0')
+        else:
+            ControlA = DataDoor(IP, Port, self.username, self.password)
+            son = ControlA.getchildren(self.entity)
+            nodes = []
+            nodes.append(son['nodes'])  # 所有点
+            Nodes=son['nodes']
+            links=son['links']
+            # sonnodes=[]
+            # graph=[]#所有边
+            k = 1  # 计数单位
+            while layer > 1:
+                sonnodes = []
+                print('获取第{}层子节点'.format(k))
+                for node in nodes[k-1]:
+                    # ControlA = DataDoor(IP, Port, self.username, self.password, entity1=node)
+                    # print('开始获取子节点')
+                    #print(node)
+                    datas = ControlA.getchildren(node['id'])
+                    #print(datas)
+                    if datas['nodes']:
+                        nodes.append(datas['nodes'])
+                        Nodes=Nodes+datas['nodes']
+                        links=links+datas['links']
+                        k = k + 1
+                layer = layer - 1
+            #print('子节点提取完毕')
+            return {'nodes':Nodes,'links':links}
+
+    def control_children(self,layer):
+        graph=self.get_childgraph(layer)
+        graph['nodes'].append({'id':self.entity,'name':'','category':''})
+        #print(graph)
+        weakpath=WeakPath(graph)
+        nodes=[]
+        links=[]
+        for node in graph['nodes']:
+            try:
+                #print(node['id'])
+                [con,path]=weakpath.calculation(node['id'],self.entity)
+                #print(con)
+                node['controlPower']=con
+                nodes.append(node)
+                links=links+path
+            except:
+                pass
+        return {'nodes':nodes,'links':links}
+
 
 if __name__=='__main__':
     uesrname = 'root'
     password = '123456'
-    #entity2='上海山阳电讯器材厂'
-    #x=DataDoor(IP,Port,uesrname,password)
-    #print(x.data_process('常玉英', '上海山阳电讯器材厂'))
-    #print(x.get_Son_id('常玉英'))
-    #print(x.get_Son_id('常玉英'))
-    #for data in x.data_processB():
-    #    if data[1]==entity2:
-    #        print(data)
-    #x=Penetration(IP,Port)
-    #print(x.getPenetrationNetwork('9e7a3a48-00ae-4763-b15c-29adc9603245',3))
 
     #计算二者之间控股示例：第一页面
     #controlAB=ControlAB('常玉英','上海山阳电讯器材厂',uesrname,password)
-    #AB=controlAB.data_process()
-    #print(AB)
-    #exist=controlAB.exist
-    #print(exist)
-    #control=controlAB.cotntrol
+    #control=controlAB.data_process()
     #print(control)
 
     #计算实体控制权图代码示例：第二页面
@@ -846,11 +946,11 @@ if __name__=='__main__':
     #print(data)
 
     #计算控制系代码示例；第三页面
-    controlB=ControlFull('3ac25a5e343954e379f42c4d8fdbafff',uesrname,password)
-    #print(len(controlB.getSon(2)))
-    B=controlB.data_processA(3,3)#向内提取一层
-    print(B)
-    #graph={'nodes': [{'id': '028e78ef59d803be28cd3b451153c662', 'percent': 1.0, 'category': '自然人', 'name': '常玉英'}, {'id': '31a55c18-e90d-4f41-9e6d-92d153933c48', 'percent': 1.0, 'category': '', 'name': '宁夏玉龙福康假肢矫形器装配服务中心(有限公司)'}], 'links': [{'source': '31a55c18-e90d-4f41-9e6d-92d153933c48', 'target': '028e78ef59d803be28cd3b451153c662', 'value': 1.0}]}
-    #Weak=WeakPath(graph)
-    #print(Weak.edgeLinks)
-    #print(Weak.calculationAB('31a55c18-e90d-4f41-9e6d-92d153933c48','028e78ef59d803be28cd3b451153c662'))
+    #controlB=ControlFull('028e78ef59d803be28cd3b451153c662',uesrname,password)
+    #B=controlB.data_processA(3,3)#向内提取一层
+    #print(B)
+
+    #计算控制网络代码示例：
+    #d=ControlWeb('9a4b84fc-b51b-4829-a052-263997814567',uesrname,password)
+    #print(d.control_parents(2))
+    #print(d.control_children(1))#有点慢，子节点有点多
