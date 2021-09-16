@@ -216,6 +216,24 @@ class GstoreConnector:
                 res = self.Post(strUrl, strPost)
             return res
 
+def Node_id(graph=[]):
+        node1=[]
+        nodes=[]
+        flag=[]
+        i=0
+        #print(graph)
+        while(i<len(graph)):
+            for node in graph[i] :
+                if(node not in flag):
+                    flag.append(node)
+                    link=Query_Hold_type(node)
+                    #print('node',link)
+                    node1.extend(map(lambda item: (node,item['n']['value'],item['t']['value'] if 't' in item else ''), link))
+                    #print(node1)
+                    nodes=list(map(lambda item: {'id':item[0],'entity_name':item[1],'category':item[2]},node1))
+            i=i+1
+        return nodes
+
 def csk(graph=[]):
         edgeLinks={}
         for gra in graph:
@@ -242,9 +260,8 @@ def Extraction_path(entity1, entity2, path=[],path1={}):
         path = path + [entity1]
         # print('path',path)   取消注释查看当前path的元素
         if entity1 == entity2:
-            # print('回溯')
+            #print('回溯')
             return [path]
-
         paths = []
         # 存储所有路径
         #print(paths)
@@ -267,9 +284,8 @@ def Query_Held_Company(u):
         password = "123456"
         sparql= """
                 select * where {{
-                ?entity <file:///D:/d2rq-0.8.1/vocab/entity_name> "{id}".
-                ?entity <file:///D:/d2rq-0.8.1/vocab/entity_id> ?entity_id.
-                ?hold <file:///D:/d2rq-0.8.1/vocab/hold_head_id> ?entity_id.
+                ?hold <file:///D:/d2rq-0.8.1/vocab/hold_head_id> "{id}".
+                ?hold <file:///D:/d2rq-0.8.1/vocab/hold_stake> ?stake .
                 ?hold <file:///D:/d2rq-0.8.1/vocab/hold_tail_id> ?associate_entity_id.
                 ?associate_entity <file:///D:/d2rq-0.8.1/vocab/entity_id> ?associate_entity_id.
                 ?associate_entity <file:///D:/d2rq-0.8.1/vocab/entity_name> ?associate_entity_name.
@@ -286,8 +302,55 @@ def Query_Held_Company(u):
         res1=gc.query("entity2","json",sparql,"GET")
         #print(res1)
         return res
+    
+def Query_Held_Stake(u,v):
+                # before you run this example, make sure that you have started up ghttp service (using bin/ghttp port)
+        IP = "202.114.74.170"
+        Port = 9900
+        username = "root"
+        password = "123456"
+        sparql= """
+    select ?stake ?amount where
+    {{
+     ?hold <file:///D:/d2rq-0.8.1/vocab/hold_head_id> "{id1}" .
+     ?hold <file:///D:/d2rq-0.8.1/vocab/hold_tail_id> "{id2}" .
+     ?hold <file:///D:/d2rq-0.8.1/vocab/hold_stake> ?stake .
+    ?hold <file:///D:/d2rq-0.8.1/vocab/hold_amount> ?amount.
+    }}""".format(id1=u,id2=v)
 
+                #字符串拼接SELECT ?entity_a_id WHERE {"+ u + " (^vocab:hold_head_id|vocab:hold_tail_id) ?entity_a_id}.
+        filename = "res.txt"
+
+                # start a gc with given IP, Port, username and password
+        gc = GstoreConnector(IP, Port, username, password)
+
+                # queryjson.loads(gc.query("subgraph","json",sparql,"GET"))['results']['bindings']
+        res = json.loads(gc.query("entity2","json",sparql,"GET"))['results']['bindings']
+        res1=gc.query("entity2","json",sparql,"GET")
+        #print(res1)
+        return res
+    
     #查询持股人及股权信息
+def Query_Entity_Id(u):
+                        #''' 查询持股人\n 输入：被持股公司\u 输出：持股人信息\res'''
+                # before you run this example, make sure that you have started up ghttp service (using bin/ghttp port)
+        IP = "202.114.74.170"
+        Port = 9900
+        username = "root"
+        password = "123456"
+        sparql= """
+                select * where {{
+                ?entity <file:///D:/d2rq-0.8.1/vocab/entity_name> ?entity_name.
+                ?entity <file:///D:/d2rq-0.8.1/vocab/entity_id> "{id}".
+                }}""".format(id=u)
+        filename = "res.txt"
+        
+                # start a gc with given IP, Port, username and password
+        gc =  GstoreConnector(IP, Port, username, password)
+
+                # queryjson.loads(gc.query("subgraph","json",sparql,"GET"))['results']['bindings']
+        res = json.loads(gc.query("entity2","json",sparql,"GET"))['results']['bindings']
+        return res
 def Query_Shareholder(u):
                         #''' 查询持股人\n 输入：被持股公司\u 输出：持股人信息\res'''
                 # before you run this example, make sure that you have started up ghttp service (using bin/ghttp port)
@@ -303,8 +366,7 @@ def Query_Shareholder(u):
                 ?hold <file:///D:/d2rq-0.8.1/vocab/hold_amount> ?hold_amount.
                 ?hold <file:///D:/d2rq-0.8.1/vocab/hold_stake> ?hold_stake.
                 ?hold <file:///D:/d2rq-0.8.1/vocab/hold_tail_id> ?associate_entity_id.
-                ?associate_entity <file:///D:/d2rq-0.8.1/vocab/entity_id> ?associate_entity_id.
-                ?associate_entity <file:///D:/d2rq-0.8.1/vocab/entity_name> "{id}".
+                ?associate_entity <file:///D:/d2rq-0.8.1/vocab/entity_id> "{id}".
                 }}""".format(id=u)
         filename = "res.txt"
         
@@ -315,6 +377,48 @@ def Query_Shareholder(u):
         res = gc.query("entity2","json",sparql,"GET")
         return res
     #查询持股路径
+def Query_associate_entity_id(u):
+                        #''' 查询持股id\n 输入：被持股公司id\u 输出：持股人id\res'''
+                # before you run this example, make sure that you have started up ghttp service (using bin/ghttp port)
+        IP = "202.114.74.170"
+        Port = 9900
+        username = "root"
+        password = "123456"
+        sparql= """
+                select * where {{
+                ?hold <file:///D:/d2rq-0.8.1/vocab/hold_head_id> "{id}".
+                ?hold <file:///D:/d2rq-0.8.1/vocab/hold_tail_id> ?associate_entity_id.
+                }}""".format(id=u)
+        filename = "res.txt"
+        
+                # start a gc with given IP, Port, username and password
+        gc =  GstoreConnector(IP, Port, username, password)
+
+                # queryjson.loads(gc.query("subgraph","json",sparql,"GET"))['results']['bindings']
+        res = gc.query("entity2","json",sparql,"GET")
+        return res
+def Query_Hold_type(u):
+                        #''' 查询持股id\n 输入：被持股公司id\u 输出：持股人id\res'''
+                # before you run this example, make sure that you have started up ghttp service (using bin/ghttp port)
+        IP = "202.114.74.170"
+        Port = 9900
+        username = "root"
+        password = "123456"
+        sparql= """
+select * where
+    {{
+     ?e <file:///D:/d2rq-0.8.1/vocab/entity_id> "{id}" .
+     ?e <file:///D:/d2rq-0.8.1/vocab/entity_name> ?n .
+     optional {{?e <file:///D:/d2rq-0.8.1/vocab/entity_type> ?t .}}
+    }}""".format(id=u)
+        filename = "res.txt"
+        
+                # start a gc with given IP, Port, username and password
+        gc =  GstoreConnector(IP, Port, username, password)
+
+                # queryjson.loads(gc.query("subgraph","json",sparql,"GET"))['results']['bindings']
+        res = json.loads(gc.query("entity2","json",sparql,"GET"))['results']['bindings']
+        return res
 def Query_Shareholding_Path(start,end):
                         #''' 查询持股路径\n 输入：持股人，被持股公司\u 输出：持股路径\path[]'''
             q1=queue.Queue()      #创建队列存放关联实体
@@ -329,14 +433,14 @@ def Query_Shareholding_Path(start,end):
             edge[start]=[]
             edge[end]=[]
             t0=time.time()
-            while (not q1.empty()):#提取路径子图not q1.empty() and q1.qsize()<=2000复杂节点可加限制
+            while (not q1.empty() and q1.qsize()<=1500):#提取路径子图not q1.empty() and q1.qsize()<=2000复杂节点可加限制
                     u=q1.get()
                     #print(u)
                     res=Query_Held_Company(u)
                     #print(res)
-                    subgraph.extend(res)#提取查询节点的List
+                    #subgraph.extend(res)#提取查询节点的List
                     #print(subgraph)
-                    res1 = map(lambda item: item['associate_entity_name']['value'], res)
+                    res1 = map(lambda item: item['associate_entity_id']['value'], res)
                     #print(res1)
                     runningTime=time.time()-t0
                     #print (runningTime)
@@ -361,9 +465,12 @@ def Query_Shareholding_Path(start,end):
             dict={}
             q2.put(end)
             dict[start]=True
+            i=0
             while(not q2.empty()):#去除路径子图杂点
                     u=q2.get()
+                    #print (u)
                     res=edge[u]
+                    #print(res)
                     dict[u]=True
                     for v in res:
                             if(v==start):
@@ -377,15 +484,41 @@ def Query_Shareholding_Path(start,end):
             #print(edge["62a0feb2-979c-4688-98a0-4509b958945c"])
             path1=csk(path)
             path2=[]
+            PATH=[]
+            PATHs=[]
+            link=[]
+            stake=[]
+            amount=[]
             #print(path1)
             paths=Extraction_path(start,end,path2,path1)
-            return paths
+            while i<len(paths):
+                j=0
+                long=len(paths[i])
+                k=0
+                while k<long-1:
+                        link.append(paths[i][k+1]) #生成一个新的列表，原列表的最后一位成为第一位
+                        k+=1 #依次向前进一位
+                        #print(link)
+                link.append(path[i][0])
+                
+                stake.extend(map(lambda x,y: list(map(lambda item: item['stake']['value'], Query_Held_Stake(x,y))),paths[i],link))
+                amount.extend(map(lambda x,y: list(map(lambda item: item['amount']['value'], Query_Held_Stake(x,y))),paths[i],link))
+                PATH.extend(map(lambda x,y,z,w: {'source':x,'target':y,"stake":z,"amount":w},paths[i],link,stake,amount))
+                PATHs.extend(PATH)
+                i=i+1
+            nodes=Node_id(paths)
+            #print(path3)
+            return {'nodes':nodes,
+        'pathlist':
+        PATHs
+        }
+#data = Query_Held_Company("74872bcb8aab954c6db239059794df05")
+#print(data)
+#data1= Query_Shareholder("长沙泰帮医疗科技有限公司")
+#print(data1)'"张宝世","呼伦贝尔市新村物流运输有限责任公司"
+#print(Query_Hold_type("84117557-ca25-4b5c-97ed-592fa17ba095"
 
-data = Query_Held_Company("冯首佳")
-print(data)
-data1= Query_Shareholder("长沙泰帮医疗科技有限公司")
-print(data1)
-    #print(type(data))"张宝世","呼伦贝尔市新村物流运输有限责任公司"
-data2=Query_Shareholding_Path("交通银行股份有限公司","上海鑫景滨江投资发展有限公司")
-print(data2)
-#print(len(data1))0
+#''''/'' "9a4b84fc-b51b-4829-a052-263997814567","f915d73e-94ab-44bf-8649-0655c99511a1""#'''#另一组测试实体''/''"74872bcb8aab954c6db239059794df05","84117557-ca25-4b5c-97ed-592fa17ba095"
+    #/删除此处#进行路径查询测试/'''data2为所查询路径图
+#data2=Query_Shareholding_Path("9a4b84fc-b51b-4829-a052-263997814567","f915d73e-94ab-44bf-8649-0655c99511a1")
+#print(data2)
