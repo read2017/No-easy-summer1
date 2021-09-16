@@ -480,7 +480,7 @@ def Query_Shareholding_Path(start,end):
                                     path.append((v,u))
                         
             #print(len(path))
-            print (path)
+            #print (path)
             #print(edge["62a0feb2-979c-4688-98a0-4509b958945c"])
             path1=csk(path)
             path2=[]
@@ -491,7 +491,7 @@ def Query_Shareholding_Path(start,end):
             amount=[]
             LINK=[]
             paths=Extraction_path(start,end,path2,path1)
-            print(paths)
+            #print(paths)
             while i<len(paths):
                 j=0
                 long=len(paths[i])
@@ -507,7 +507,7 @@ def Query_Shareholding_Path(start,end):
                 PATH.extend(map(lambda x,y,z,w: {'source':x,'target':y,"stake":z,"amount":w},paths[i],link,stake,amount))
                 def parseItem(item):
                     tmp = Query_Held_Stake(item[0],item[1])[0]
-                    print('tmp',tmp)
+                    #print('tmp',tmp)
                     return {'source':item[0],'target':item[1],'stake':tmp['stake']['value'],'amount':tmp['amount']['value']}
                 LINK.extend(map(parseItem, path))
 
@@ -529,5 +529,5 @@ def Query_Shareholding_Path(start,end):
 
 #''''/'' "9a4b84fc-b51b-4829-a052-263997814567","f915d73e-94ab-44bf-8649-0655c99511a1""#'''#另一组测试实体''/''"74872bcb8aab954c6db239059794df05","84117557-ca25-4b5c-97ed-592fa17ba095"
     #/删除此处#进行路径查询测试/'''data2为所查询路径图
-data2=Query_Shareholding_Path("74872bcb8aab954c6db239059794df05","84117557-ca25-4b5c-97ed-592fa17ba095")
-print(data2)
+#data2=Query_Shareholding_Path("74872bcb8aab954c6db239059794df05","84117557-ca25-4b5c-97ed-592fa17ba095")
+#print(data2)
