@@ -298,9 +298,9 @@ def Query_Held_Company(u):
         gc = GstoreConnector(IP, Port, username, password)
 
                 # queryjson.loads(gc.query("subgraph","json",sparql,"GET"))['results']['bindings']
-        res = json.loads(gc.query("entity2","json",sparql,"GET"))['results']['bindings']
         res1=gc.query("entity2","json",sparql,"GET")
         #print(res1)
+        res = json.loads(gc.query("entity2","json",sparql,"GET"))['results']['bindings']
         return res
     
 def Query_Held_Stake(u,v):
@@ -327,7 +327,7 @@ def Query_Held_Stake(u,v):
                 # queryjson.loads(gc.query("subgraph","json",sparql,"GET"))['results']['bindings']
         res = json.loads(gc.query("entity2","json",sparql,"GET"))['results']['bindings']
         res1=gc.query("entity2","json",sparql,"GET")
-        #print(res1)
+        print(u,v,res1)
         return res
     
     #查询持股人及股权信息
@@ -360,13 +360,11 @@ def Query_Shareholder(u):
         password = "123456"
         sparql= """
                 select * where {{
-                ?entity <file:///D:/d2rq-0.8.1/vocab/entity_name> ?entity_name.
-                ?entity <file:///D:/d2rq-0.8.1/vocab/entity_id> ?entity_id.
+                ?hold <file:///D:/d2rq-0.8.1/vocab/hold_tail_id> "{id}".
                 ?hold <file:///D:/d2rq-0.8.1/vocab/hold_head_id> ?entity_id.
-                ?hold <file:///D:/d2rq-0.8.1/vocab/hold_amount> ?hold_amount.
-                ?hold <file:///D:/d2rq-0.8.1/vocab/hold_stake> ?hold_stake.
-                ?hold <file:///D:/d2rq-0.8.1/vocab/hold_tail_id> ?associate_entity_id.
-                ?associate_entity <file:///D:/d2rq-0.8.1/vocab/entity_id> "{id}".
+                ?entity <file:///D:/d2rq-0.8.1/vocab/entity_id> ?entity_id.
+                ?entity <file:///D:/d2rq-0.8.1/vocab/entity_name> ?entity_name.
+                 ?hold <file:///D:/d2rq-0.8.1/vocab/hold_stake> ?stake.
                 }}""".format(id=u)
         filename = "res.txt"
         
@@ -374,7 +372,7 @@ def Query_Shareholder(u):
         gc =  GstoreConnector(IP, Port, username, password)
 
                 # queryjson.loads(gc.query("subgraph","json",sparql,"GET"))['results']['bindings']
-        res = gc.query("entity2","json",sparql,"GET")
+        res = json.loads(gc.query("entity2","json",sparql,"GET"))['results']['bindings']
         return res
     #查询持股路径
 def Query_associate_entity_id(u):
@@ -419,6 +417,28 @@ select * where
                 # queryjson.loads(gc.query("subgraph","json",sparql,"GET"))['results']['bindings']
         res = json.loads(gc.query("entity2","json",sparql,"GET"))['results']['bindings']
         return res
+def Query_Entity(u):
+    entity=u
+    link=[]
+    node=[]
+    res2=Query_Shareholder(u)
+    res1=Query_Held_Company(u)
+    #print("res1",res1)
+
+    #print("res2",res2)
+    if len(res1)>0:
+        node.extend(list(map(lambda item: {'id':item['associate_entity_id']['value'],'name':item['associate_entity_name']['value'],'category':''},res1)))
+
+    #print(node)
+        link.extend(list(map(lambda item: {'target':item['associate_entity_id']['value'],'source':entity,'stake':item['stake']['value']},res1)))
+    if len(res2)>0:
+        node.extend(list(map(lambda item: {'id':item['entity_id']['value'],'name':item['entity_name']['value'],'category':''},res2)))    
+        link.extend(list(map(lambda item: {'target':entity,'source':item['entity_id']['value'],'stake':item['stake']['value']},res2)))
+    #print(link)
+    return {'nodes':node,
+        'links':
+        link
+        }
 def Query_Shareholding_Path(start,end):
                         #''' 查询持股路径\n 输入：持股人，被持股公司\u 输出：持股路径\path[]'''
             q1=queue.Queue()      #创建队列存放关联实体
@@ -522,12 +542,16 @@ def Query_Shareholding_Path(start,end):
         LINK
         }
 #data = Query_Held_Company("74872bcb8aab954c6db239059794df05")
-#print(data)
-#data1= Query_Shareholder("长沙泰帮医疗科技有限公司")
-#print(data1)'"张宝世","呼伦贝尔市新村物流运输有限责任公司"
-#print(Query_Hold_type("84117557-ca25-4b5c-97ed-592fa17ba095"
+##print(data)
+#print(list(map(lambda item: {'id':item['associate_entity_id']['value'],'name':item['associate_entity_name']['value']},data)))
+#print(list(map(lambda item: {'target':item['associate_entity_id']['value'],'source':'','stake':item['stake']['value']},data)))
+#data1= Query_Shareholder("84117557-ca25-4b5c-97ed-592fa17ba095")
+#print(data1)#'"张宝世","呼伦贝尔市新村物流运输有限责任公司"
+##print(Query_Hold_type("84117557-ca25-4b5c-97ed-592fa17ba095"
 
 #''''/'' "9a4b84fc-b51b-4829-a052-263997814567","f915d73e-94ab-44bf-8649-0655c99511a1""#'''#另一组测试实体''/''"74872bcb8aab954c6db239059794df05","84117557-ca25-4b5c-97ed-592fa17ba095"
     #/删除此处#进行路径查询测试/'''data2为所查询路径图
 #data2=Query_Shareholding_Path("74872bcb8aab954c6db239059794df05","84117557-ca25-4b5c-97ed-592fa17ba095")
 #print(data2)
+data3=Query_Entity("9a4b84fc-b51b-4829-a052-263997814567")
+print(data3)
