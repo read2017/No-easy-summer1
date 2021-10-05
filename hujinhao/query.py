@@ -228,7 +228,7 @@ def Node_id(graph=[]):
                     flag.append(node)
                     link=Query_Hold_type(node)
                     #print('node',link)
-                    node1.extend(map(lambda item: (node,item['n']['value'],item['t']['value'] if 't' in item else ''), link))
+                    node1.extend(map(lambda item: (node,item['n']['value'],'P' if len(item['n']['value'])<5 else 'E'), link))
                     #print(node1)
                     nodes=list(map(lambda item: {'id':item[0],'entity_name':item[1],'category':item[2]},node1))
             i=i+1
@@ -327,7 +327,7 @@ def Query_Held_Stake(u,v):
                 # queryjson.loads(gc.query("subgraph","json",sparql,"GET"))['results']['bindings']
         res = json.loads(gc.query("entity2","json",sparql,"GET"))['results']['bindings']
         res1=gc.query("entity2","json",sparql,"GET")
-        print(u,v,res1)
+        #print(u,v,res1)
         return res
     
     #查询持股人及股权信息
@@ -427,12 +427,12 @@ def Query_Entity(u):
 
     #print("res2",res2)
     if len(res1)>0:
-        node.extend(list(map(lambda item: {'id':item['associate_entity_id']['value'],'name':item['associate_entity_name']['value'],'category':''},res1)))
+        node.extend(list(map(lambda item: {'id':item['associate_entity_id']['value'],'name':item['associate_entity_name']['value'],'category':'P' if len(item['associate_entity_name']['value'])<5 else 'E'},res1)))
 
     #print(node)
         link.extend(list(map(lambda item: {'target':item['associate_entity_id']['value'],'source':entity,'stake':item['stake']['value']},res1)))
     if len(res2)>0:
-        node.extend(list(map(lambda item: {'id':item['entity_id']['value'],'name':item['entity_name']['value'],'category':''},res2)))    
+        node.extend(list(map(lambda item: {'id':item['entity_id']['value'],'name':item['entity_name']['value'],'category':'P' if len(item['entity_name']['value'])<5 else 'E'},res2)))    
         link.extend(list(map(lambda item: {'target':entity,'source':item['entity_id']['value'],'stake':item['stake']['value']},res2)))
     #print(link)
     return {'nodes':node,
@@ -551,7 +551,7 @@ def Query_Shareholding_Path(start,end):
 
 #''''/'' "9a4b84fc-b51b-4829-a052-263997814567","f915d73e-94ab-44bf-8649-0655c99511a1""#'''#另一组测试实体''/''"74872bcb8aab954c6db239059794df05","84117557-ca25-4b5c-97ed-592fa17ba095"
     #/删除此处#进行路径查询测试/'''data2为所查询路径图
-#data2=Query_Shareholding_Path("74872bcb8aab954c6db239059794df05","84117557-ca25-4b5c-97ed-592fa17ba095")
-#print(data2)
-data3=Query_Entity("9a4b84fc-b51b-4829-a052-263997814567")
-print(data3)
+data2=Query_Shareholding_Path("74872bcb8aab954c6db239059794df05","84117557-ca25-4b5c-97ed-592fa17ba095")
+print(data2)
+#data3=Query_Entity("d340d48c-5278-4e39-809c-819b9cc01a72")
+#print(data3)
