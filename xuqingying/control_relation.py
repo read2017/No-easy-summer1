@@ -477,7 +477,7 @@ class WeakPath:
                 #print(gra)
                 if entity1==gra['source'] and gra['target']==entity2:
                     #print(111111)
-                    control=gra['value']
+                    control=gra['stake']
             return 1
         else:
             paths=self.Check(entity1,entity2)
@@ -494,8 +494,8 @@ class WeakPath:
                         x=0
                         for gra in self.graph['links']:
                             if gra['source']==path[i] and gra['target']==path[i+1]:
-                                link.append(gra['value'])
-                                p.append(gra)
+                                link.append(float(gra['stake']))
+                                p.append({'source':gra['source'],'target':gra['target'],'value':float(gra['stake'])})
                                 x=1
                                 #print(gra[2])
                         if x==0:
@@ -547,49 +547,24 @@ class ControlAB:
         self.username=username
         self.password=password
 
-    def check(self):
-        """
-        检验连接是否存在
-        """
-        path=query.Query_Holder(self.entity1,self.entity2)
-        if path:
-            self.exist=True
-            return path
-        else:
-            return None
-
     def data_process(self):
         """
         判断是否存在最大控制关系
         若存在，返回控制权指数
         """
         #if self.exist==True:
-        paths = query.Query_Holder(self.entity1, self.entity2)
-        #print(1111)
-        if paths:
-            self.exist=True
-            graph=[]
-            allNode=[]
-            ControlA = DataDoor(IP, Port, self.username, self.password)
-            for path in paths:
-                #print(path[0])
-                #print(path[1])
-                power,nodes=ControlA.data_process(path[0],path[1])
-                if path[0]==self.entity1:
-                    id_1=nodes[0]['id']
-                if path[1]==self.entity1:
-                    id_1=nodes[1]['id']
-                if path[0]==self.entity2:
-                    id_2=nodes[0]['id']
-                if path[1]==self.entity2:
-                    id_2=nodes[1]['id']
-                #print(power)
-                if power:
-                    graph.append(power)
-                    allNode=allNode+nodes
-            #print(graph)
-            WeakCacul=WeakPath({'nodes':allNode,'links':graph})
-            conAB=WeakCacul.calculationAB(id_2,id_1)
+        all_info = query.Query_Shareholding_Path(self.entity1, self.entity2)
+        #print(all_info)
+        nodes=all_info['nodes']
+        #print(nodes)
+        #print(all_info['nodes'])
+        links=all_info['links']
+        #print(links)
+        #print(all_info['links'])
+        if links:
+
+            WeakCacul=WeakPath({'nodes':nodes,'links':links})
+            conAB=WeakCacul.calculationAB(self.entity1,self.entity2)
             control=[]
             #allNode=set(allNode)
             #for node in allNode:
@@ -599,7 +574,7 @@ class ControlAB:
             #if max(control)==conAB[0]:
             #    self.cotntrol=True
             #    return conAB
-            result={'totalControlPower':conAB[0],"pathList":conAB[1],'nodes':allNode,'links':conAB[2]}
+            result={'totalControlPower':conAB[0],"pathList":conAB[1],'nodes':nodes,'links':conAB[2]}
             return result
         else:
             pass
@@ -936,9 +911,9 @@ if __name__=='__main__':
     password = '123456'
 
     #计算二者之间控股示例：第一页面
-    #controlAB=ControlAB('常玉英','上海山阳电讯器材厂',uesrname,password)
-    #control=controlAB.data_process()
-    #print(control)
+    controlAB=ControlAB('74872bcb8aab954c6db239059794df05','84117557-ca25-4b5c-97ed-592fa17ba095',uesrname,password)
+    control=controlAB.data_process()
+    print(control)
 
     #计算实体控制权图代码示例：第二页面
     #controlA=ControlA('上海山阳电讯器材厂',uesrname,password)
