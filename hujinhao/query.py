@@ -421,23 +421,23 @@ def Query_Entity(u):
     entity=u
     link=[]
     node=[]
-    res2=Query_Shareholder(u)
+    res=Query_Shareholder(u)
+    res2=sorted(res,key=lambda x:x["stake"]["value"],reverse=True)
     res1=Query_Held_Company(u)
-    #print("res1",res1)
+    # print("res1",res1)
 
-    #print("res2",res2)
+    # print("res2",res2[1])
     if len(res1)>0:
         node.extend(list(map(lambda item: {'id':item['associate_entity_id']['value'],'name':item['associate_entity_name']['value'],'category':'P' if len(item['associate_entity_name']['value'])<5 else 'E'},res1)))
 
     #print(node)
         link.extend(list(map(lambda item: {'target':item['associate_entity_id']['value'],'source':entity,'stake':item['stake']['value']},res1)))
     if len(res2)>0:
-        node.extend(list(map(lambda item: {'id':item['entity_id']['value'],'name':item['entity_name']['value'],'category':'P' if len(item['entity_name']['value'])<5 else 'E'},res2)))    
-        link.extend(list(map(lambda item: {'target':entity,'source':item['entity_id']['value'],'stake':item['stake']['value']},res2)))
+        node.extend(list(map(lambda item: {'id':item['entity_id']['value'],'name':item['entity_name']['value'],'category':'P' if len(item['entity_name']['value'])<5 else 'E'},res2[0:9])))    
+        link.extend(list(map(lambda item: {'target':entity,'source':item['entity_id']['value'],'stake':item['stake']['value']},res2[0:9])))
     #print(link)
-    return {'nodes':node,
-        'links':
-        link
+    return {'nodes': node,
+        'links': link
         }
 def Query_Shareholding_Path(start,end):
                         #''' 查询持股路径\n 输入：持股人，被持股公司\u 输出：持股路径\path[]'''
@@ -551,7 +551,7 @@ def Query_Shareholding_Path(start,end):
 
 #''''/'' "9a4b84fc-b51b-4829-a052-263997814567","f915d73e-94ab-44bf-8649-0655c99511a1""#'''#另一组测试实体''/''"74872bcb8aab954c6db239059794df05","84117557-ca25-4b5c-97ed-592fa17ba095"
     #/删除此处#进行路径查询测试/'''data2为所查询路径图
-data2=Query_Shareholding_Path("74872bcb8aab954c6db239059794df05","84117557-ca25-4b5c-97ed-592fa17ba095")
-print(data2)
-#data3=Query_Entity("d340d48c-5278-4e39-809c-819b9cc01a72")
-#print(data3)
+#data2=Query_Shareholding_Path("74872bcb8aab954c6db239059794df05","84117557-ca25-4b5c-97ed-592fa17ba095")
+#print(data2)
+data3=Query_Entity("d340d48c-5278-4e39-809c-819b9cc01a72")
+print(data3)
