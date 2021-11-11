@@ -3,6 +3,9 @@
     - `host:string`
     - `port:number`
     - `dbname:string` 目前是`entity2`
+- getRawGraph
+    - `hid:string`
+    - `level:number` *optional*
 - getPenetrationNetwork
     - `centerId:string` 查询节点的eid
     - `level:number` *optional* 层数限制

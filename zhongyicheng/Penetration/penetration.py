@@ -13,10 +13,19 @@ np.set_printoptions(threshold=np.inf,linewidth=400)
 #commTot = 0
 #maxresults = 0
 class Penetration:
-    def __init__(self,host,port,dbname='entity2',username = "root",password = "123456"):
+    def __init__(self,host,port,dbname='entity3',username = "root",password = "123456"):
         self.gc = GstoreConnector(host,port,username,password)
         self.gc.load(dbname,'POST')
         self.db = dbname
+    def getEntity(self,id):
+        sql = """
+    select ?e where
+    {{
+     ?e <file:///D:/d2rq-0.8.1/vocab/entity_id> "{}" .
+    }}""".format(id)
+        #print(id,json.loads(self.gc.query(self.db,"json",sql,"GET")))
+        res = json.loads(self.gc.query(self.db,"json",sql,"GET"))['results']['bindings'][0]['e']['value']
+        return res
     def getNeighbor(self,u):
         global commTot
         global getNeighborTot
@@ -24,12 +33,12 @@ class Penetration:
 #        t_t = time.time()
 #        t_c = time.time()
         sql = """
-    select ?id2 ?stake where
+    select ?e2 ?s where
     {{
-     ?hold <file:///D:/d2rq-0.8.1/vocab/hold_head_id> ?id2 .
-     ?hold <file:///D:/d2rq-0.8.1/vocab/hold_tail_id> "{id}" .
-     ?hold <file:///D:/d2rq-0.8.1/vocab/hold_stake> ?stake .
-    }}""".format(id=u)
+     ?e2 <file:///D:/d2rq-0.8.1/vocab/entity_hold> ?hold .
+     ?hold <file:///D:/d2rq-0.8.1/vocab/hold_entity> <{e1}> .
+     ?hold <file:///D:/d2rq-0.8.1/vocab/hold_stake> ?s .
+    }}""".format(e1=u)
     #    print(sql)
         res = json.loads(self.gc.query(self.db,"json",sql,"GET"))['results']['bindings']
     #    maxresults = max(maxresults,len(res))
@@ -48,10 +57,11 @@ class Penetration:
         id2n = {}
         n2id = {}
         q = Queue()
-        q.put(hid)
-        vis[hid] = 0
-        id2n[hid] = 0
-        n2id[0] = hid
+        entity = self.getEntity(hid)
+        q.put(entity)
+        vis[entity] = 0
+        id2n[entity] = 0
+        n2id[0] = entity
         while(not q.empty()):
             u = q.get()
             if(vis[u]>max_d):
@@ -60,8 +70,8 @@ class Penetration:
             if(max_d>depth_limit):
                 break
             links = self.getNeighbor(u)
-            neighbors = map(lambda item: item['id2']['value'], links)
-            subg.extend(map(lambda item: (u,item['id2']['value'],self.getHoldInfo(item)), links))
+            neighbors = map(lambda item: item['e2']['value'], links)
+            subg.extend(map(lambda item: (u,item['e2']['value'],float(item['s']['value'])), links))
 
             for v in neighbors:
                 if(not v in vis):
@@ -77,14 +87,14 @@ class Penetration:
     #t_running = time.time() - t_start
     #print('running time',t_running)
     #t_calc_s = time.time()
-    def getEntity(self,u):
+    def getEntityInfo(self,u):
         sql = """
     select * where
     {{
-     ?e <file:///D:/d2rq-0.8.1/vocab/entity_id> "{id}" .
-     ?e <file:///D:/d2rq-0.8.1/vocab/entity_name> ?n .
-     optional {{?e <file:///D:/d2rq-0.8.1/vocab/entity_type> ?t .}}
-    }}""".format(id=u)
+     <{e}> <file:///D:/d2rq-0.8.1/vocab/entity_name> ?n .
+     <{e}> <file:///D:/d2rq-0.8.1/vocab/entity_id> ?id .
+     optional {{<{e}> <file:///D:/d2rq-0.8.1/vocab/entity_type> ?t .}}
+    }}""".format(e=u)
         res = json.loads(self.gc.query(self.db,"json",sql,"GET"))['results']['bindings'][0]
     #    commTot += time.time() - t_c
         return res
@@ -109,24 +119,23 @@ class Penetration:
             for i,j,d in zip(actual_hold.row,actual_hold.col,actual_hold.data):
                 if(j == target_n):
                     eid = n2id[i]
-                    tmp = self.getEntity(eid)
+                    tmp = self.getEntityInfo(eid)
                     n = tmp['n']['value']
                     t = tmp['t']['value'] if 't' in tmp else ''
     #                result.append((n2id[i],d))
                     result.append({'id':eid,'percent':d,'category':t,'name':n})
-
-        tmp = self.getEntity(n2id[target_n])
+        tmp = self.getEntityInfo(n2id[target_n])
         n = tmp['n']['value']
         t = tmp['t']['value'] if 't' in tmp else ''
-        result.append({'id':n2id[target_n],'percent':d,'category':t,'name':n})
+        result.append({'id':n2id[target_n],'percent':0,'category':t,'name':n})
         return result
     #print('Total time',time.time() - t_start)
     #print('nodes',len(vis),'edges',len(subg),'query: {} {:.2%}'.format(getNeighborTot,getNeighborTot/t_running),'comm',commTot)
     def getPenetrationNetwork(self,centerId,dateFrom=None,dateTo=None,level=10):
         graph,id2n,n2id = self.queryholders(centerId,level)
-        nodes = self.calcTotalHolding(graph,id2n,n2id,id2n[centerId])
-        return {'nodes':nodes,
-        'links':
-    #    graph
-        list(map(lambda item: {'source':item[0],'target':item[1],'value':item[2]},graph))
+        nodes = self.calcTotalHolding(graph,id2n,n2id,id2n[self.getEntity(centerId)])
+        return {
+            'nodes':nodes,
+            'links':list(map(lambda item: {'source':item[0],'target':item[1],'value':item[2]},graph))
         }
+
